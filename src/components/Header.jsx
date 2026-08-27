@@ -11,6 +11,7 @@ import { useToast } from '../context/ToastContext';
 export default function Header({
   nomeEu,
   emojiEu,
+  fotoEu,
   onTrocarPerfil,
   onOpenSettings,
   settings,
@@ -30,7 +31,6 @@ export default function Header({
     }
 
     if (notifPermission === 'granted') {
-      // Testar notificação
       sendAppNotification('🔔 Notificações Ativas!', {
         body: 'Você receberá avisos quando seu amor postar no Feed ou escrever uma carta 💜',
       });
@@ -75,7 +75,7 @@ export default function Header({
 
       {/* Action Controls */}
       <div className="flex items-center gap-1.5 shrink-0">
-        {/* Botão de Notificações */}
+        {/* Botão Notificações */}
         <button
           onClick={handleToggleNotifications}
           className={`w-8 h-8 rounded-full border-3 border-ink flex items-center justify-center text-xs sm:text-sm shadow-brutsm transition active:scale-95 ${
@@ -111,17 +111,26 @@ export default function Header({
           Trocar
         </button>
 
-        {/* Avatar */}
+        {/* Avatar com Foto Real ou Emoji */}
         <div className="flex items-center gap-1 pl-0.5">
           <span className="text-xs font-bold text-white hidden sm:inline whitespace-nowrap">
             Olá, {nomeEu}!
           </span>
-          <span
-            className="w-8 h-8 rounded-full bg-cyan border-3 border-ink flex items-center justify-center text-sm shrink-0 shadow-brutsm"
-            title={`Você é ${nomeEu}`}
-          >
-            {emojiEu || '🐰'}
-          </span>
+          {fotoEu ? (
+            <img
+              src={fotoEu}
+              alt={nomeEu}
+              className="w-8 h-8 rounded-full border-3 border-ink object-cover shrink-0 shadow-brutsm"
+              title={`Você é ${nomeEu}`}
+            />
+          ) : (
+            <span
+              className="w-8 h-8 rounded-full bg-cyan border-3 border-ink flex items-center justify-center text-sm shrink-0 shadow-brutsm"
+              title={`Você é ${nomeEu}`}
+            >
+              {emojiEu || '🐰'}
+            </span>
+          )}
         </div>
       </div>
     </div>

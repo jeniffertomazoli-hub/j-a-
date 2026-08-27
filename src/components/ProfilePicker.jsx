@@ -19,25 +19,43 @@ export default function ProfilePicker({ onEscolher }) {
       </h2>
 
       <div className="flex flex-col gap-3.5 w-full max-w-xs animate-fadeUp">
+        {/* Jeniffer */}
         <button
           onClick={() => onEscolher('parceiro1')}
-          className="btn-brut py-4 px-6 bg-pink text-ink text-base font-extrabold flex items-center justify-center gap-3 shadow-brut hover:scale-102 transition"
+          className="btn-brut py-3.5 px-5 bg-pink text-ink text-base font-extrabold flex items-center justify-center gap-3 shadow-brut hover:scale-102 transition"
         >
-          <span className="text-2xl">{settings.emoji1 || '🐰'}</span>
-          <span>{settings.apelido1}</span>
+          {settings.foto1 ? (
+            <img
+              src={settings.foto1}
+              alt={settings.apelido1}
+              className="w-10 h-10 rounded-full border-2 border-ink object-cover shrink-0 shadow-brutsm"
+            />
+          ) : (
+            <span className="text-2xl shrink-0">{settings.emoji1 || '🐰'}</span>
+          )}
+          <span className="truncate">{settings.apelido1}</span>
         </button>
 
+        {/* Alvaro */}
         <button
           onClick={() => onEscolher('parceiro2')}
-          className="btn-brut py-4 px-6 bg-purple text-ink text-base font-extrabold flex items-center justify-center gap-3 shadow-brut hover:scale-102 transition"
+          className="btn-brut py-3.5 px-5 bg-purple text-ink text-base font-extrabold flex items-center justify-center gap-3 shadow-brut hover:scale-102 transition"
         >
-          <span className="text-2xl">{settings.emoji2 || '🦊'}</span>
-          <span>{settings.apelido2}</span>
+          {settings.foto2 ? (
+            <img
+              src={settings.foto2}
+              alt={settings.apelido2}
+              className="w-10 h-10 rounded-full border-2 border-ink object-cover shrink-0 shadow-brutsm"
+            />
+          ) : (
+            <span className="text-2xl shrink-0">{settings.emoji2 || '🦊'}</span>
+          )}
+          <span className="truncate">{settings.apelido2}</span>
         </button>
       </div>
 
       <p className="text-xs text-white/80 font-medium mt-7 max-w-xs leading-relaxed">
-        Essa preferência fica salva neste aparelho para sabermos se as respostas e momentos são da Jeniffer ou do Alvaro 💜
+        Essa preferência fica salva neste aparelho para sabermos se as respostas, fotos e momentos são da Jeniffer ou do Alvaro 💜
       </p>
     </div>
   );

@@ -7,6 +7,8 @@ export const DEFAULT_COUPLE_SETTINGS = {
   apelido2: 'Alvaro',
   emoji1: '🐰',
   emoji2: '🦊',
+  foto1: '', // URL da foto de perfil da Jeniffer
+  foto2: '', // URL da foto de perfil do Alvaro
   dataInicio: '', // 'AAAA-MM-DD'
   pinCode: '1234',
 };
@@ -43,9 +45,10 @@ export function getCoupleSettings() {
     return {
       ...DEFAULT_COUPLE_SETTINGS,
       ...parsed,
-      // Garante que se ainda estiver com os nomes genéricos antigos, use Jeniffer e Alvaro
       apelido1: parsed.apelido1 && parsed.apelido1 !== 'Parceiro(a) 1' && parsed.apelido1 !== 'Parceiro 1' ? parsed.apelido1 : 'Jeniffer',
       apelido2: parsed.apelido2 && parsed.apelido2 !== 'Parceiro(a) 2' && parsed.apelido2 !== 'Parceiro 2' ? parsed.apelido2 : 'Alvaro',
+      foto1: parsed.foto1 || '',
+      foto2: parsed.foto2 || '',
     };
   } catch {
     return DEFAULT_COUPLE_SETTINGS;

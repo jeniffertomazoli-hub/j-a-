@@ -1,7 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import Modal from './Modal';
 import { saveCoupleSettings } from '../lib/storage';
 import { useToast } from '../context/ToastContext';
+import { compressImage } from '../lib/imageUtils';
+import { uploadImagemMemoria } from '../lib/supabase';
 import {
   isNotificationSupported,
   getNotificationPermission,
@@ -9,17 +11,23 @@ import {
   sendAppNotification,
 } from '../lib/notifications';
 
-const EMOJI_OPTIONS = ['🐰', '🦊', '🐻', '🐼', '🐱', '🐶', '🦁', '🐨', '🦄', '🐯', '🐧', '🦉'];
+const EMOJI_OPTIONS = ['🐰', '🦊', '🐻', '🐼', '🐱', '🐶', '🦁', '🐨', '🦄', '🐯', '🐧', '🦉', '🌸', '✨', '👑', '💙'];
 
 export default function CoupleSettingsModal({ isOpen, onClose, settings, onSettingsUpdated }) {
   const toast = useToast();
   const [notifPermission, setNotifPermission] = useState(getNotificationPermission());
+  const [salvandoFoto, setSalvandoFoto] = useState(false);
+
+  const fileInputRef1 = useRef(null);
+  const fileInputRef2 = useRef(null);
 
   const [formData, setFormData] = useState({
     apelido1: settings?.apelido1 || 'Jeniffer',
     emoji1: settings?.emoji1 || '🐰',
+    foto1: settings?.foto1 || '',
     apelido2: settings?.apelido2 || 'Alvaro',
     emoji2: settings?.emoji2 || '🦊',
+    foto2: settings?.foto2 || '',
     dataInicio: settings?.dataInicio || '',
     pinCode: settings?.pinCode || '1234',
   });
@@ -27,11 +35,49 @@ export default function CoupleSettingsModal({ isOpen, onClose, settings, onSetti
   useEffect(() => {
     if (isOpen) {
       setNotifPermission(getNotificationPermission());
+      setFormData({
+        apelido1: settings?.apelido1 || 'Jeniffer',
+        emoji1: settings?.emoji1 || '🐰',
+        foto1: settings?.foto1 || '',
+        apelido2: settings?.apelido2 || 'Alvaro',
+        emoji2: settings?.emoji2 || '🦊',
+        foto2: settings?.foto2 || '',
+        dataInicio: settings?.dataInicio || '',
+        pinCode: settings?.pinCode || '1234',
+      });
     }
-  }, [isOpen]);
+  }, [isOpen, settings]);
 
   function handleChange(field, val) {
     setFormData((prev) => ({ ...prev, [field]: val }));
+  }
+
+  async function handleUploadFotoPerfil(parceiro, e) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setSalvandoFoto(true);
+    try {
+      toast.show('Comprimindo foto de perfil...');
+      const compressed = await compressImage(file, 800, 0.85);
+
+      toast.show('Enviando foto...');
+      const fotoUrl = await uploadImagemMemoria(compressed);
+
+      if (parceiro === 'p1') {
+        setFormData((prev) => ({ ...prev, foto1: fotoUrl }));
+      } else {
+        setFormData((prev) => ({ ...prev, foto2: fotoUrl }));
+      }
+
+      toast.love('Foto de perfil carregada! Lembre-se de salvar as mudanças 📸');
+    } catch (err) {
+      console.error(err);
+      toast.error('Erro ao enviar foto. Tente novamente!');
+    } finally {
+      setSalvandoFoto(false);
+      e.target.value = '';
+    }
   }
 
   async function handleToggleNotifications() {
@@ -85,12 +131,59 @@ export default function CoupleSettingsModal({ isOpen, onClose, settings, onSetti
       badgeText="Personalizar"
       badgeColor="bg-purple"
     >
-      <form onSubmit={handleSave} className="space-y-4">
-        {/* Parceiro 1 */}
+      <form onSubmit={handleSave} className="space-y-4 max-h-[75vh] overflow-y-auto pr-1">
+        {/* Parceira 1 (Jeniffer) */}
         <div className="rounded-xl border-2 border-ink p-3 bg-yellow/10">
-          <label className="block text-xs font-black uppercase text-ink mb-1.5">
-            Parceira 1 (Jeniffer)
+          <label className="block text-xs font-black uppercase text-ink mb-2">
+            Perfil de {formData.apelido1 || 'Jeniffer'}
           </label>
+
+          <div className="flex items-center gap-3 mb-2.5">
+            {/* Foto ou Emoji da Jeniffer */}
+            <div className="relative">
+              {formData.foto1 ? (
+                <img
+                  src={formData.foto1}
+                  alt="Foto Jeniffer"
+                  className="w-12 h-12 rounded-full border-2 border-ink object-cover shadow-brutsm"
+                />
+              ) : (
+                <div className="w-12 h-12 rounded-full bg-yellow border-2 border-ink flex items-center justify-center text-2xl shadow-brutsm">
+                  {formData.emoji1}
+                </div>
+              )}
+            </div>
+
+            <div className="flex-1 flex gap-1.5">
+              <button
+                type="button"
+                onClick={() => fileInputRef1.current?.click()}
+                disabled={salvandoFoto}
+                className="btn-brut flex-1 py-1.5 px-2 bg-white text-ink text-[10px] font-black shadow-brutsm flex items-center justify-center gap-1"
+              >
+                <span>📷</span>
+                <span>{formData.foto1 ? 'Trocar Foto' : 'Adicionar Foto'}</span>
+              </button>
+              {formData.foto1 && (
+                <button
+                  type="button"
+                  onClick={() => setFormData((prev) => ({ ...prev, foto1: '' }))}
+                  className="btn-brut py-1.5 px-2 bg-pink text-white text-[10px] font-black"
+                  title="Remover foto"
+                >
+                  ✕
+                </button>
+              )}
+              <input
+                ref={fileInputRef1}
+                type="file"
+                accept="image/*"
+                onChange={(e) => handleUploadFotoPerfil('p1', e)}
+                className="hidden"
+              />
+            </div>
+          </div>
+
           <div className="flex gap-2">
             <select
               value={formData.emoji1}
@@ -113,11 +206,58 @@ export default function CoupleSettingsModal({ isOpen, onClose, settings, onSetti
           </div>
         </div>
 
-        {/* Parceiro 2 */}
+        {/* Parceiro 2 (Alvaro) */}
         <div className="rounded-xl border-2 border-ink p-3 bg-pink/10">
-          <label className="block text-xs font-black uppercase text-ink mb-1.5">
-            Parceiro 2 (Alvaro)
+          <label className="block text-xs font-black uppercase text-ink mb-2">
+            Perfil de {formData.apelido2 || 'Alvaro'}
           </label>
+
+          <div className="flex items-center gap-3 mb-2.5">
+            {/* Foto ou Emoji do Alvaro */}
+            <div className="relative">
+              {formData.foto2 ? (
+                <img
+                  src={formData.foto2}
+                  alt="Foto Alvaro"
+                  className="w-12 h-12 rounded-full border-2 border-ink object-cover shadow-brutsm"
+                />
+              ) : (
+                <div className="w-12 h-12 rounded-full bg-pink border-2 border-ink flex items-center justify-center text-2xl shadow-brutsm">
+                  {formData.emoji2}
+                </div>
+              )}
+            </div>
+
+            <div className="flex-1 flex gap-1.5">
+              <button
+                type="button"
+                onClick={() => fileInputRef2.current?.click()}
+                disabled={salvandoFoto}
+                className="btn-brut flex-1 py-1.5 px-2 bg-white text-ink text-[10px] font-black shadow-brutsm flex items-center justify-center gap-1"
+              >
+                <span>📷</span>
+                <span>{formData.foto2 ? 'Trocar Foto' : 'Adicionar Foto'}</span>
+              </button>
+              {formData.foto2 && (
+                <button
+                  type="button"
+                  onClick={() => setFormData((prev) => ({ ...prev, foto2: '' }))}
+                  className="btn-brut py-1.5 px-2 bg-pink text-white text-[10px] font-black"
+                  title="Remover foto"
+                >
+                  ✕
+                </button>
+              )}
+              <input
+                ref={fileInputRef2}
+                type="file"
+                accept="image/*"
+                onChange={(e) => handleUploadFotoPerfil('p2', e)}
+                className="hidden"
+              />
+            </div>
+          </div>
+
           <div className="flex gap-2">
             <select
               value={formData.emoji2}
@@ -196,9 +336,10 @@ export default function CoupleSettingsModal({ isOpen, onClose, settings, onSetti
           </button>
           <button
             type="submit"
-            className="btn-brut flex-1 py-2.5 bg-yellow text-ink text-xs shadow-brut"
+            disabled={salvandoFoto}
+            className="btn-brut flex-1 py-2.5 bg-yellow text-ink text-xs font-black shadow-brut disabled:opacity-50"
           >
-            Salvar Mudanças
+            {salvandoFoto ? 'Enviando foto...' : 'Salvar Mudanças 💜'}
           </button>
         </div>
       </form>

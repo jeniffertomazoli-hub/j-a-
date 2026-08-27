@@ -52,6 +52,7 @@ export function AppContent() {
 
   const meuNome = quemSouEu === 'parceiro1' ? settings.apelido1 : settings.apelido2;
   const meuEmoji = quemSouEu === 'parceiro1' ? settings.emoji1 : settings.emoji2;
+  const meuFoto = quemSouEu === 'parceiro1' ? settings.foto1 : settings.foto2;
 
   return (
     <div className="min-h-screen bg-royal text-ink flex flex-col">
@@ -62,6 +63,7 @@ export function AppContent() {
         <Header
           nomeEu={meuNome}
           emojiEu={meuEmoji}
+          fotoEu={meuFoto}
           onTrocarPerfil={handleTrocarPerfil}
           onOpenSettings={() => setIsSettingsOpen(true)}
           settings={settings}
