@@ -8,59 +8,75 @@
  * @returns {Promise<File>} Imagem comprimida como File pronto para upload
  */
 export async function compressImage(file, maxWidth = 1600, quality = 0.82) {
-  if (!file.type.startsWith('image/')) {
-    return file;
-  }
+  try {
+    if (!file || !file.type || !file.type.startsWith('image/')) {
+      return file;
+    }
 
-  // Se já for muito pequena (< 300 KB), não precisa reprocessar
-  if (file.size < 300 * 1024) {
-    return file;
-  }
+    // Se já for muito pequena (< 300 KB), não precisa reprocessar
+    if (file.size && file.size < 300 * 1024) {
+      return file;
+    }
 
-  return new Promise((resolve) => {
-    const reader = new FileReader();
-    reader.readAsDataURL(file);
+    return new Promise((resolve) => {
+      const reader = new FileReader();
+      reader.readAsDataURL(file);
 
-    reader.onload = (event) => {
-      const img = new Image();
-      img.src = event.target.result;
+      reader.onload = (event) => {
+        try {
+          const img = new Image();
+          img.src = event.target.result;
 
-      img.onload = () => {
-        let width = img.width;
-        let height = img.height;
+          img.onload = () => {
+            try {
+              let width = img.width;
+              let height = img.height;
 
-        if (width > maxWidth) {
-          height = Math.round((height * maxWidth) / width);
-          width = maxWidth;
-        }
+              if (width > maxWidth) {
+                height = Math.round((height * maxWidth) / width);
+                width = maxWidth;
+              }
 
-        const canvas = document.createElement('canvas');
-        canvas.width = width;
-        canvas.height = height;
+              const canvas = document.createElement('canvas');
+              canvas.width = width;
+              canvas.height = height;
 
-        const ctx = canvas.getContext('2d');
-        ctx.drawImage(img, 0, 0, width, height);
+              const ctx = canvas.getContext('2d');
+              ctx.drawImage(img, 0, 0, width, height);
 
-        canvas.toBlob(
-          (blob) => {
-            if (!blob) {
-              resolve(file); // Fallback para arquivo original
-              return;
+              canvas.toBlob(
+                (blob) => {
+                  if (!blob) {
+                    resolve(file); // Fallback para arquivo original
+                    return;
+                  }
+                  const safeName = (file.name || 'foto.jpg').replace(/\.[^/.]+$/, '.jpg');
+                  const compressedFile = new File([blob], safeName, {
+                    type: 'image/jpeg',
+                    lastModified: Date.now(),
+                  });
+                  resolve(compressedFile);
+                },
+                'image/jpeg',
+                quality
+              );
+            } catch (canvasErr) {
+              console.warn('Canvas resize error, using original file:', canvasErr);
+              resolve(file);
             }
-            const compressedFile = new File([blob], file.name.replace(/\.[^/.]+$/, '.jpg'), {
-              type: 'image/jpeg',
-              lastModified: Date.now(),
-            });
-            resolve(compressedFile);
-          },
-          'image/jpeg',
-          quality
-        );
+          };
+
+          img.onerror = () => resolve(file);
+        } catch (imgErr) {
+          console.warn('Image load error, using original file:', imgErr);
+          resolve(file);
+        }
       };
 
-      img.onerror = () => resolve(file);
-    };
-
-    reader.onerror = () => resolve(file);
-  });
+      reader.onerror = () => resolve(file);
+    });
+  } catch (err) {
+    console.warn('compressImage fallback:', err);
+    return file;
+  }
 }

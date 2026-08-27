@@ -41,14 +41,15 @@ export default function FeedTab({ quemSouEu, settings }) {
   const [arquivoFoto, setArquivoFoto] = useState(null);
   const [previewFoto, setPreviewFoto] = useState(null);
   const [showNovoPost, setShowNovoPost] = useState(false);
-  const fileInputRef = useRef(null);
+  const fileInputRef1 = useRef(null);
+  const fileInputRef2 = useRef(null);
 
   // Modais
   const [imagemCheia, setImagemCheia] = useState(null);
   const [editModal, setEditModal] = useState({ isOpen: false, id: null, texto: '' });
   const [deleteModal, setDeleteModal] = useState({ isOpen: false, id: null });
 
-  // Comentários abertos por post id
+  // Comentários
   const [comentariosAbertos, setComentariosAbertos] = useState({});
   const [novoComentarioTexto, setNovoComentarioTexto] = useState({});
 
@@ -73,7 +74,12 @@ export default function FeedTab({ quemSouEu, settings }) {
     const file = e.target.files?.[0];
     if (file) {
       setArquivoFoto(file);
-      setPreviewFoto(URL.createObjectURL(file));
+      try {
+        const previewUrl = URL.createObjectURL(file);
+        setPreviewFoto(previewUrl);
+      } catch (err) {
+        console.warn('URL.createObjectURL failed:', err);
+      }
       setShowNovoPost(true);
     }
     e.target.value = '';
@@ -91,9 +97,15 @@ export default function FeedTab({ quemSouEu, settings }) {
 
       if (arquivoFoto) {
         setStatusUpload('Otimizando foto...');
-        const compressed = await compressImage(arquivoFoto);
+        let fileToSend = arquivoFoto;
+        try {
+          fileToSend = await compressImage(arquivoFoto);
+        } catch (compErr) {
+          console.warn('Compressão falhou, usando arquivo original:', compErr);
+        }
+
         setStatusUpload('Enviando para o feed...');
-        fotoUrl = await uploadImagemMemoria(compressed);
+        fotoUrl = await uploadImagemMemoria(fileToSend);
       }
 
       setStatusUpload('Publicando...');
@@ -119,8 +131,8 @@ export default function FeedTab({ quemSouEu, settings }) {
       toast.love('Publicado no feed do casal! 📸💜');
       carregarPosts();
     } catch (err) {
-      console.error(err);
-      toast.error('Não consegui publicar agora. Tente de novo!');
+      console.error('Erro ao criar post:', err);
+      toast.error(err.message || 'Erro ao publicar. Verifique o banco de dados.');
     } finally {
       setPublicando(false);
       setStatusUpload('');
@@ -186,7 +198,7 @@ export default function FeedTab({ quemSouEu, settings }) {
       carregarPosts();
     } catch (err) {
       console.error(err);
-      toast.error('Erro ao editar publicação.');
+      toast.error(err.message || 'Erro ao editar publicação.');
     }
   }
 
@@ -199,7 +211,7 @@ export default function FeedTab({ quemSouEu, settings }) {
       carregarPosts();
     } catch (err) {
       console.error(err);
-      toast.error('Erro ao excluir publicação.');
+      toast.error(err.message || 'Erro ao excluir publicação.');
     }
   }
 
@@ -243,7 +255,7 @@ export default function FeedTab({ quemSouEu, settings }) {
             No que você está pensando agora, {meuNome}?
           </button>
           <button
-            onClick={() => fileInputRef.current?.click()}
+            onClick={() => fileInputRef1.current?.click()}
             className="btn-brut px-3 py-2 bg-cyan text-ink text-xs shrink-0 shadow-brutsm flex items-center gap-1"
             title="Adicionar foto"
           >
@@ -251,7 +263,7 @@ export default function FeedTab({ quemSouEu, settings }) {
             <span className="hidden sm:inline">Foto</span>
           </button>
           <input
-            ref={fileInputRef}
+            ref={fileInputRef1}
             type="file"
             accept="image/*"
             onChange={handleSelecionarFoto}
@@ -290,10 +302,18 @@ export default function FeedTab({ quemSouEu, settings }) {
               </div>
             )}
 
+            <input
+              ref={fileInputRef2}
+              type="file"
+              accept="image/*"
+              onChange={handleSelecionarFoto}
+              className="hidden"
+            />
+
             <div className="flex gap-2">
               <button
                 type="button"
-                onClick={() => fileInputRef.current?.click()}
+                onClick={() => fileInputRef2.current?.click()}
                 className="btn-brut px-3 py-2 bg-white text-ink text-xs flex items-center gap-1.5"
               >
                 <span>📷</span>

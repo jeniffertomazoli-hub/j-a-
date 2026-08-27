@@ -87,15 +87,20 @@ export async function buscarCapsulaMemorias() {
 // 📸 FEED DO CASAL (ESTILO INSTAGRAM ÍNTIMO)
 // -------------------------------------------------------------
 export async function criarPostFeed({ parceiro, autor_nome, texto, foto_url }) {
-  const { error } = await supabase.from('feed_posts').insert({
+  const { data, error } = await supabase.from('feed_posts').insert({
     parceiro,
     autor_nome,
     texto: texto || '',
     foto_url: foto_url || null,
     curtidas: [],
     comentarios: [],
-  });
-  if (error) throw error;
+  }).select();
+
+  if (error) {
+    console.error('Erro ao criar post no feed:', error);
+    throw new Error(`Erro no banco: ${error.message || error.details || 'Falha ao salvar post'}`);
+  }
+  return data;
 }
 
 export async function buscarPostsFeed(limit = 50) {
@@ -104,7 +109,10 @@ export async function buscarPostsFeed(limit = 50) {
     .select('*')
     .order('criado_em', { ascending: false })
     .limit(limit);
-  if (error) throw error;
+  if (error) {
+    console.error('Erro ao buscar posts:', error);
+    throw error;
+  }
   return data || [];
 }
 
@@ -241,17 +249,7 @@ export async function buscarMensagensConversa(data = getTodayDateString()) {
 }
 
 export async function uploadFotoConversa(file) {
-  const ext = file.name.split('.').pop() || 'jpg';
-  const fileName = `chat/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
-
-  const { error: uploadError } = await supabase.storage
-    .from('memorias-imagens')
-    .upload(fileName, file, { cacheControl: '3600', upsert: false });
-
-  if (uploadError) throw uploadError;
-
-  const { data } = supabase.storage.from('memorias-imagens').getPublicUrl(fileName);
-  return data.publicUrl;
+  return uploadImagemMemoria(file);
 }
 
 // -------------------------------------------------------------
@@ -345,7 +343,7 @@ export async function buscarRespostasQuiz() {
 }
 
 // -------------------------------------------------------------
-// MEMÓRIAS
+// MEMÓRIAS & STORAGE DE IMAGENS
 // -------------------------------------------------------------
 export async function salvarMemoria(memoria) {
   const { error } = await supabase.from('memorias').insert(memoria);
@@ -353,17 +351,35 @@ export async function salvarMemoria(memoria) {
 }
 
 export async function uploadImagemMemoria(file) {
-  const ext = file.name.split('.').pop() || 'jpg';
-  const fileName = `${crypto.randomUUID ? crypto.randomUUID() : Date.now()}.${ext}`;
+  try {
+    const rawExt = file && file.name ? file.name.split('.').pop() : 'jpg';
+    const ext = (rawExt || 'jpg').toLowerCase().replace(/[^a-z0-9]/g, '') || 'jpg';
+    const timestamp = Date.now();
+    const randomId = Math.random().toString(36).substring(2, 8);
+    const fileName = `upload-${timestamp}-${randomId}.${ext}`;
 
-  const { error: uploadError } = await supabase.storage
-    .from('memorias-imagens')
-    .upload(fileName, file, { cacheControl: '3600', upsert: false });
+    const { data: uploadData, error: uploadError } = await supabase.storage
+      .from('memorias-imagens')
+      .upload(fileName, file, {
+        cacheControl: '3600',
+        upsert: true,
+        contentType: file.type || 'image/jpeg',
+      });
 
-  if (uploadError) throw uploadError;
+    if (uploadError) {
+      console.error('Storage Upload Error:', uploadError);
+      throw new Error(`Falha no Storage: ${uploadError.message || uploadError.error || 'Verifique as permissões do bucket memorias-imagens'}`);
+    }
 
-  const { data } = supabase.storage.from('memorias-imagens').getPublicUrl(fileName);
-  return data.publicUrl;
+    const { data } = supabase.storage
+      .from('memorias-imagens')
+      .getPublicUrl(fileName);
+
+    return data.publicUrl;
+  } catch (err) {
+    console.error('uploadImagemMemoria error:', err);
+    throw err;
+  }
 }
 
 export async function buscarMemorias() {
