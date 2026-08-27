@@ -12,7 +12,7 @@ export function getTodayDateString() {
 }
 
 // -------------------------------------------------------------
-// TERMÔMETRO / FEED DIÁRIO
+// TERMÔMETRO / DIÁRIO ÍNTIMO
 // -------------------------------------------------------------
 export async function salvarRespostaDiaria(parceiro, { nivel, motivo }) {
   const { error } = await supabase.from('respostas_diarias').insert({
@@ -81,6 +81,76 @@ export async function buscarCapsulaMemorias() {
     .order('data', { ascending: false });
   if (error) throw error;
   return data || [];
+}
+
+// -------------------------------------------------------------
+// 📸 FEED DO CASAL (ESTILO INSTAGRAM ÍNTIMO)
+// -------------------------------------------------------------
+export async function criarPostFeed({ parceiro, autor_nome, texto, foto_url }) {
+  const { error } = await supabase.from('feed_posts').insert({
+    parceiro,
+    autor_nome,
+    texto: texto || '',
+    foto_url: foto_url || null,
+    curtidas: [],
+    comentarios: [],
+  });
+  if (error) throw error;
+}
+
+export async function buscarPostsFeed(limit = 50) {
+  const { data, error } = await supabase
+    .from('feed_posts')
+    .select('*')
+    .order('criado_em', { ascending: false })
+    .limit(limit);
+  if (error) throw error;
+  return data || [];
+}
+
+export async function alternarCurtidaPost(postId, parceiro, curtidasAtuais = []) {
+  const jaCurtiu = curtidasAtuais.includes(parceiro);
+  const novasCurtidas = jaCurtiu
+    ? curtidasAtuais.filter((p) => p !== parceiro)
+    : [...curtidasAtuais, parceiro];
+
+  const { error } = await supabase
+    .from('feed_posts')
+    .update({ curtidas: novasCurtidas })
+    .eq('id', postId);
+  if (error) throw error;
+  return novasCurtidas;
+}
+
+export async function adicionarComentarioPost(postId, { parceiro, autor_nome, texto }, comentariosAtuais = []) {
+  const novoComentario = {
+    id: `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+    parceiro,
+    autor_nome,
+    texto,
+    criado_em: new Date().toISOString(),
+  };
+  const novosComentarios = [...comentariosAtuais, novoComentario];
+
+  const { error } = await supabase
+    .from('feed_posts')
+    .update({ comentarios: novosComentarios })
+    .eq('id', postId);
+  if (error) throw error;
+  return novosComentarios;
+}
+
+export async function editarPostFeed(postId, novoTexto) {
+  const { error } = await supabase
+    .from('feed_posts')
+    .update({ texto: novoTexto })
+    .eq('id', postId);
+  if (error) throw error;
+}
+
+export async function excluirPostFeed(postId) {
+  const { error } = await supabase.from('feed_posts').delete().eq('id', postId);
+  if (error) throw error;
 }
 
 // -------------------------------------------------------------

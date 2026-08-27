@@ -13,6 +13,7 @@ import Navigation from './components/Navigation';
 import CoupleSettingsModal from './components/CoupleSettingsModal';
 
 import TermometroTab from './components/tabs/TermometroTab';
+import FeedTab from './components/tabs/FeedTab';
 import TopicosTab from './components/tabs/TopicosTab';
 import CartasTab from './components/tabs/CartasTab';
 import FilmesTab from './components/tabs/FilmesTab';
@@ -67,6 +68,9 @@ export function AppContent() {
       <main className="flex-1">
         {tabAtiva === 'termometro' && (
           <TermometroTab quemSouEu={quemSouEu} settings={settings} />
+        )}
+        {tabAtiva === 'feed' && (
+          <FeedTab quemSouEu={quemSouEu} settings={settings} />
         )}
         {tabAtiva === 'topicos' && (
           <TopicosTab quemSouEu={quemSouEu} settings={settings} />

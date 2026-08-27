@@ -2,11 +2,12 @@ import React, { useRef, useEffect } from 'react';
 
 export const TABS = [
   { id: 'termometro', label: 'Termômetro', emoji: '🌡️' },
+  { id: 'feed', label: 'Feed', emoji: '📸' },
   { id: 'topicos', label: 'Tópicos', emoji: '📋' },
   { id: 'cartas', label: 'Cartas', emoji: '💌' },
   { id: 'filmes', label: 'Filmes', emoji: '🎬' },
   { id: 'quiz', label: 'Quiz', emoji: '💞' },
-  { id: 'memorias', label: 'Memórias', emoji: '📸' },
+  { id: 'memorias', label: 'Memórias', emoji: '✨' },
   { id: 'historico', label: 'Painel', emoji: '📊' },
 ];
 
@@ -46,8 +47,8 @@ export default function Navigation({ tabAtiva, onMudarTab }) {
             >
               <span>{tab.emoji}</span>
               <span>{tab.label}</span>
-              {/* Badge especial na aba de Cartas */}
-              {tab.id === 'cartas' && isActive === false && (
+              {/* Notificação sutil para Feed e Cartas */}
+              {(tab.id === 'feed' || tab.id === 'cartas') && !isActive && (
                 <span className="w-1.5 h-1.5 rounded-full bg-pink inline-block" />
               )}
             </button>
@@ -55,7 +56,7 @@ export default function Navigation({ tabAtiva, onMudarTab }) {
         })}
       </div>
 
-      {/* Edge fades para indicar scroll horizontal */}
+      {/* Edge fades para indicar scroll horizontal suave */}
       <div className="pointer-events-none absolute top-0.5 bottom-2.5 left-0 w-5 bg-gradient-to-r from-royal to-transparent" />
       <div className="pointer-events-none absolute top-0.5 bottom-2.5 right-0 w-5 bg-gradient-to-l from-royal to-transparent" />
     </div>
