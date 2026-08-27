@@ -6,6 +6,7 @@ import {
   getCoupleSettings,
 } from './lib/storage';
 import { ToastProvider } from './context/ToastContext';
+import { useNotificationWatcher } from './hooks/useNotificationWatcher';
 import PinLock from './components/PinLock';
 import ProfilePicker from './components/ProfilePicker';
 import Header from './components/Header';
@@ -27,6 +28,9 @@ export function AppContent() {
   const [tabAtiva, setTabAtiva] = useState('termometro');
   const [settings, setSettings] = useState(getCoupleSettings());
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+
+  // Monitora e dispara notificações em tempo real para ações do parceiro
+  useNotificationWatcher(quemSouEu, settings);
 
   function handleEscolherPerfil(perfil) {
     setActiveProfile(perfil);
