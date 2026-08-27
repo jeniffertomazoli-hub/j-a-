@@ -14,6 +14,7 @@ import CoupleSettingsModal from './components/CoupleSettingsModal';
 
 import TermometroTab from './components/tabs/TermometroTab';
 import TopicosTab from './components/tabs/TopicosTab';
+import CartasTab from './components/tabs/CartasTab';
 import FilmesTab from './components/tabs/FilmesTab';
 import QuizTab from './components/tabs/QuizTab';
 import MemoriasTab from './components/tabs/MemoriasTab';
@@ -26,24 +27,20 @@ export function AppContent() {
   const [settings, setSettings] = useState(getCoupleSettings());
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
 
-  // Selecionar perfil
   function handleEscolherPerfil(perfil) {
     setActiveProfile(perfil);
     setQuemSouEu(perfil);
   }
 
-  // Trocar perfil
   function handleTrocarPerfil() {
     setActiveProfile(null);
     setQuemSouEu(null);
   }
 
-  // Se não estiver autenticado pelo PIN
   if (!autenticado) {
     return <PinLock onEntrar={() => setAutenticado(true)} />;
   }
 
-  // Se não escolheu quem está usando o celular
   if (!quemSouEu) {
     return <ProfilePicker onEscolher={handleEscolherPerfil} />;
   }
@@ -53,7 +50,6 @@ export function AppContent() {
 
   return (
     <div className="min-h-screen bg-royal text-ink flex flex-col">
-      {/* Top Fixed Header with Safe Area support */}
       <header
         className="sticky top-0 z-30 bg-royal border-b-3 border-ink"
         style={{ paddingTop: 'env(safe-area-inset-top)' }}
@@ -68,13 +64,15 @@ export function AppContent() {
         <Navigation tabAtiva={tabAtiva} onMudarTab={setTabAtiva} />
       </header>
 
-      {/* Main Tab Area */}
       <main className="flex-1">
         {tabAtiva === 'termometro' && (
           <TermometroTab quemSouEu={quemSouEu} settings={settings} />
         )}
         {tabAtiva === 'topicos' && (
           <TopicosTab quemSouEu={quemSouEu} settings={settings} />
+        )}
+        {tabAtiva === 'cartas' && (
+          <CartasTab quemSouEu={quemSouEu} settings={settings} />
         )}
         {tabAtiva === 'filmes' && (
           <FilmesTab quemSouEu={quemSouEu} settings={settings} />
@@ -90,7 +88,6 @@ export function AppContent() {
         )}
       </main>
 
-      {/* Modal de Configurações do Casal */}
       <CoupleSettingsModal
         isOpen={isSettingsOpen}
         onClose={() => setIsSettingsOpen(false)}

@@ -3,6 +3,7 @@ import React, { useRef, useEffect } from 'react';
 export const TABS = [
   { id: 'termometro', label: 'Termômetro', emoji: '🌡️' },
   { id: 'topicos', label: 'Tópicos', emoji: '📋' },
+  { id: 'cartas', label: 'Cartas', emoji: '💌' },
   { id: 'filmes', label: 'Filmes', emoji: '🎬' },
   { id: 'quiz', label: 'Quiz', emoji: '💞' },
   { id: 'memorias', label: 'Memórias', emoji: '📸' },
@@ -28,7 +29,7 @@ export default function Navigation({ tabAtiva, onMudarTab }) {
     <div className="relative">
       <div
         ref={containerRef}
-        className="max-w-3xl mx-auto flex gap-2 overflow-x-auto scrollbar-none px-3 sm:px-5 pb-3 pt-0.5"
+        className="max-w-3xl mx-auto flex gap-2 overflow-x-auto scrollbar-none px-3 sm:px-5 pb-2.5 pt-0.5"
       >
         {TABS.map((tab) => {
           const isActive = tabAtiva === tab.id;
@@ -45,14 +46,18 @@ export default function Navigation({ tabAtiva, onMudarTab }) {
             >
               <span>{tab.emoji}</span>
               <span>{tab.label}</span>
+              {/* Badge especial na aba de Cartas */}
+              {tab.id === 'cartas' && isActive === false && (
+                <span className="w-1.5 h-1.5 rounded-full bg-pink inline-block" />
+              )}
             </button>
           );
         })}
       </div>
 
-      {/* Subtle edge fades for horizontal scrolling */}
-      <div className="pointer-events-none absolute top-0.5 bottom-3 left-0 w-6 bg-gradient-to-r from-royal to-transparent" />
-      <div className="pointer-events-none absolute top-0.5 bottom-3 right-0 w-6 bg-gradient-to-l from-royal to-transparent" />
+      {/* Edge fades para indicar scroll horizontal */}
+      <div className="pointer-events-none absolute top-0.5 bottom-2.5 left-0 w-5 bg-gradient-to-r from-royal to-transparent" />
+      <div className="pointer-events-none absolute top-0.5 bottom-2.5 right-0 w-5 bg-gradient-to-l from-royal to-transparent" />
     </div>
   );
 }

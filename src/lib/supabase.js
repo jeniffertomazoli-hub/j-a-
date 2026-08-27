@@ -4,11 +4,7 @@ const SUPABASE_URL = 'https://duvpdskqriegldzwheho.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImR1dnBkc2txcmllZ2xkendoZWhvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODc0NzYwNzIsImV4cCI6MjEwMzA1MjA3Mn0.xafDOGYpHEzVpRGTmYymAoR5okm3EX_WkWJMZ_4UXpQ';
 
 export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
-  realtime: {
-    params: {
-      eventsPerSecond: 10,
-    },
-  },
+  realtime: { params: { eventsPerSecond: 10 } },
 });
 
 export function getTodayDateString() {
@@ -16,7 +12,7 @@ export function getTodayDateString() {
 }
 
 // -------------------------------------------------------------
-// TERMÔMETRO & DIÁRIO (FEED ÍNTIMO)
+// TERMÔMETRO / FEED DIÁRIO
 // -------------------------------------------------------------
 export async function salvarRespostaDiaria(parceiro, { nivel, motivo }) {
   const { error } = await supabase.from('respostas_diarias').insert({
@@ -30,18 +26,13 @@ export async function salvarRespostaDiaria(parceiro, { nivel, motivo }) {
 export async function editarRespostaDiaria(id, { nivel, motivo }) {
   const { error } = await supabase
     .from('respostas_diarias')
-    .update({
-      respostas: { nivel, motivo },
-    })
+    .update({ respostas: { nivel, motivo } })
     .eq('id', id);
   if (error) throw error;
 }
 
 export async function excluirRespostaDiaria(id) {
-  const { error } = await supabase
-    .from('respostas_diarias')
-    .delete()
-    .eq('id', id);
+  const { error } = await supabase.from('respostas_diarias').delete().eq('id', id);
   if (error) throw error;
 }
 
@@ -70,9 +61,7 @@ export async function buscarHistoricoHumor(dias = 30) {
 
   const agrupado = {};
   for (const item of (data || [])) {
-    if (!agrupado[item.data]) {
-      agrupado[item.data] = { data: item.data };
-    }
+    if (!agrupado[item.data]) agrupado[item.data] = { data: item.data };
     agrupado[item.data][item.parceiro] = item.respostas?.nivel ?? null;
   }
   return Object.values(agrupado);
@@ -113,10 +102,7 @@ export async function buscarTopicosDoDia(data = getTodayDateString()) {
 }
 
 export async function alternarTopicoConcluido(id, concluida) {
-  const { error } = await supabase
-    .from('topicos')
-    .update({ concluida })
-    .eq('id', id);
+  const { error } = await supabase.from('topicos').update({ concluida }).eq('id', id);
   if (error) throw error;
 }
 
@@ -148,14 +134,15 @@ export async function buscarJogarDoDia(data = getTodayDateString()) {
 }
 
 // -------------------------------------------------------------
-// CONVERSAS DO DIA (CHAT & REFLEXÕES)
+// CONVERSAS DO DIA (CHAT + FOTOS)
 // -------------------------------------------------------------
-export async function enviarMensagemConversa(parceiro, texto, emoji) {
+export async function enviarMensagemConversa(parceiro, texto, emoji, fotoUrl = null) {
   const { error } = await supabase.from('mensagens_conversa').insert({
     data: getTodayDateString(),
     parceiro,
     texto,
     emoji,
+    foto_url: fotoUrl,
   });
   if (error) throw error;
 }
@@ -163,11 +150,7 @@ export async function enviarMensagemConversa(parceiro, texto, emoji) {
 export async function editarMensagemConversa(id, texto) {
   const { error } = await supabase
     .from('mensagens_conversa')
-    .update({
-      texto,
-      editado: true,
-      atualizado_em: new Date().toISOString(),
-    })
+    .update({ texto, editado: true, atualizado_em: new Date().toISOString() })
     .eq('id', id);
   if (error) throw error;
 }
@@ -185,6 +168,20 @@ export async function buscarMensagensConversa(data = getTodayDateString()) {
     .order('criado_em', { ascending: true });
   if (error) throw error;
   return res || [];
+}
+
+export async function uploadFotoConversa(file) {
+  const ext = file.name.split('.').pop() || 'jpg';
+  const fileName = `chat/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
+
+  const { error: uploadError } = await supabase.storage
+    .from('memorias-imagens')
+    .upload(fileName, file, { cacheControl: '3600', upsert: false });
+
+  if (uploadError) throw uploadError;
+
+  const { data } = supabase.storage.from('memorias-imagens').getPublicUrl(fileName);
+  return data.publicUrl;
 }
 
 // -------------------------------------------------------------
@@ -205,10 +202,7 @@ export async function buscarFilmesSeries() {
 }
 
 export async function alternarAssistidoFilmeSerie(id, assistido) {
-  const { error } = await supabase
-    .from('filmes_series')
-    .update({ assistido })
-    .eq('id', id);
+  const { error } = await supabase.from('filmes_series').update({ assistido }).eq('id', id);
   if (error) throw error;
 }
 
@@ -230,28 +224,19 @@ export async function buscarPerguntasQuiz() {
 }
 
 export async function criarPerguntaQuiz(texto, opcoes) {
-  const { data: ultima, error: errUltima } = await supabase
+  const { data: ultima } = await supabase
     .from('quiz_perguntas_v2')
     .select('ordem')
     .order('ordem', { ascending: false })
     .limit(1);
 
-  if (errUltima) throw errUltima;
   const proximaOrdem = (ultima?.[0]?.ordem ?? 0) + 1;
-
-  const { error } = await supabase.from('quiz_perguntas_v2').insert({
-    texto,
-    opcoes,
-    ordem: proximaOrdem,
-  });
+  const { error } = await supabase.from('quiz_perguntas_v2').insert({ texto, opcoes, ordem: proximaOrdem });
   if (error) throw error;
 }
 
 export async function editarPerguntaQuiz(id, texto, opcoes) {
-  const { error } = await supabase
-    .from('quiz_perguntas_v2')
-    .update({ texto, opcoes })
-    .eq('id', id);
+  const { error } = await supabase.from('quiz_perguntas_v2').update({ texto, opcoes }).eq('id', id);
   if (error) throw error;
 }
 
@@ -273,20 +258,12 @@ export async function salvarRespostaQuiz(perguntaId, parceiro, resposta, isEdica
   if (isEdicao) {
     const { error } = await supabase
       .from('quiz_respostas_v2')
-      .update({
-        resposta,
-        editado: true,
-        atualizado_em: new Date().toISOString(),
-      })
+      .update({ resposta, editado: true, atualizado_em: new Date().toISOString() })
       .eq('pergunta_id', perguntaId)
       .eq('parceiro', parceiro);
     if (error) throw error;
   } else {
-    const { error } = await supabase.from('quiz_respostas_v2').insert({
-      pergunta_id: perguntaId,
-      parceiro,
-      resposta,
-    });
+    const { error } = await supabase.from('quiz_respostas_v2').insert({ pergunta_id: perguntaId, parceiro, resposta });
     if (error) throw error;
   }
 }
@@ -298,7 +275,7 @@ export async function buscarRespostasQuiz() {
 }
 
 // -------------------------------------------------------------
-// MEMÓRIAS & CÁPSULA DO TEMPO
+// MEMÓRIAS
 // -------------------------------------------------------------
 export async function salvarMemoria(memoria) {
   const { error } = await supabase.from('memorias').insert(memoria);
@@ -311,17 +288,11 @@ export async function uploadImagemMemoria(file) {
 
   const { error: uploadError } = await supabase.storage
     .from('memorias-imagens')
-    .upload(fileName, file, {
-      cacheControl: '3600',
-      upsert: false,
-    });
+    .upload(fileName, file, { cacheControl: '3600', upsert: false });
 
   if (uploadError) throw uploadError;
 
-  const { data } = supabase.storage
-    .from('memorias-imagens')
-    .getPublicUrl(fileName);
-
+  const { data } = supabase.storage.from('memorias-imagens').getPublicUrl(fileName);
   return data.publicUrl;
 }
 
@@ -340,18 +311,78 @@ export async function excluirMemoria(id) {
 }
 
 // -------------------------------------------------------------
+// 💌 CARTAS "ABRA QUANDO..."
+// -------------------------------------------------------------
+export async function criarCartaAbraQuando({ titulo, mensagem, escrita_por, foto_url }) {
+  const { error } = await supabase.from('cartas_abra_quando').insert({
+    titulo,
+    mensagem,
+    escrita_por,
+    foto_url: foto_url || null,
+    aberta: false,
+  });
+  if (error) throw error;
+}
+
+export async function buscarCartas() {
+  const { data, error } = await supabase
+    .from('cartas_abra_quando')
+    .select('*')
+    .order('criado_em', { ascending: false });
+  if (error) throw error;
+  return data || [];
+}
+
+export async function abrirCarta(id, aberta_por) {
+  const { data, error } = await supabase
+    .from('cartas_abra_quando')
+    .update({
+      aberta: true,
+      aberta_por,
+      aberta_em: new Date().toISOString(),
+    })
+    .eq('id', id)
+    .select()
+    .single();
+  if (error) throw error;
+  return data;
+}
+
+export async function excluirCarta(id) {
+  const { error } = await supabase.from('cartas_abra_quando').delete().eq('id', id);
+  if (error) throw error;
+}
+
+// -------------------------------------------------------------
+// 💭 PERGUNTA DO DIA
+// -------------------------------------------------------------
+export async function marcarPerguntaRespondida(parceiro) {
+  const data = getTodayDateString();
+  const { error } = await supabase
+    .from('pergunta_do_dia')
+    .upsert({ data, parceiro, respondeu: true }, { onConflict: 'data,parceiro' });
+  if (error) throw error;
+}
+
+export async function buscarRespostasPerguntaHoje() {
+  const data = getTodayDateString();
+  const { data: res, error } = await supabase
+    .from('pergunta_do_dia')
+    .select('*')
+    .eq('data', data);
+  if (error) throw error;
+  return res || [];
+}
+
+// -------------------------------------------------------------
 // REALTIME SUBSCRIPTION HELPER
 // -------------------------------------------------------------
 export function subscribeToTable(table, onPayload) {
   const channel = supabase
-    .channel(`public:${table}`)
-    .on(
-      'postgres_changes',
-      { event: '*', schema: 'public', table },
-      (payload) => {
-        onPayload(payload);
-      }
-    )
+    .channel(`public:${table}:${Date.now()}`)
+    .on('postgres_changes', { event: '*', schema: 'public', table }, (payload) => {
+      onPayload(payload);
+    })
     .subscribe();
 
   return () => {
