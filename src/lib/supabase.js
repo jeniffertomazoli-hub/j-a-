@@ -16,7 +16,7 @@ export function getTodayDateString() {
 }
 
 // -------------------------------------------------------------
-// TERMÔMETRO & DIÁRIO
+// TERMÔMETRO & DIÁRIO (FEED ÍNTIMO)
 // -------------------------------------------------------------
 export async function salvarRespostaDiaria(parceiro, { nivel, motivo }) {
   const { error } = await supabase.from('respostas_diarias').insert({
@@ -24,6 +24,24 @@ export async function salvarRespostaDiaria(parceiro, { nivel, motivo }) {
     parceiro,
     respostas: { nivel, motivo },
   });
+  if (error) throw error;
+}
+
+export async function editarRespostaDiaria(id, { nivel, motivo }) {
+  const { error } = await supabase
+    .from('respostas_diarias')
+    .update({
+      respostas: { nivel, motivo },
+    })
+    .eq('id', id);
+  if (error) throw error;
+}
+
+export async function excluirRespostaDiaria(id) {
+  const { error } = await supabase
+    .from('respostas_diarias')
+    .delete()
+    .eq('id', id);
   if (error) throw error;
 }
 

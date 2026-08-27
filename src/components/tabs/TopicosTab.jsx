@@ -18,14 +18,15 @@ import Modal from '../Modal';
 import RouletteModal from '../RouletteModal';
 
 const CATEGORIAS = [
-  { id: 'filmes', label: 'Filmes & Séries', emoji: '🎬', cor: 'bg-pink' },
-  { id: 'roles', label: 'Rolês', emoji: '🚶', cor: 'bg-cyan' },
-  { id: 'casa', label: 'Em casa', emoji: '🏡', cor: 'bg-purple' },
+  { id: 'roles', label: 'Rolês & Passeios', emoji: '🚶', cor: 'bg-cyan', borda: 'border-cyan' },
+  { id: 'filmes', label: 'Filmes & Séries', emoji: '🎬', cor: 'bg-pink', borda: 'border-pink' },
+  { id: 'casa', label: 'Em Casa', emoji: '🏡', cor: 'bg-purple', borda: 'border-purple' },
 ];
 
-const EMOJIS_CHAT = ['🥰', '😊', '😌', '😐', '😕', '😢', '😤'];
+const EMOJIS_CHAT = ['🥰', '😊', '😌', '😐', '😕', '😢', '😤', '🍿', '🎮', '💜'];
 
 function formatHora(iso) {
+  if (!iso) return '';
   return new Date(iso).toLocaleTimeString('pt-BR', {
     hour: '2-digit',
     minute: '2-digit',
@@ -36,6 +37,7 @@ export default function TopicosTab({ quemSouEu, settings }) {
   const toast = useToast();
   const hojeIso = getTodayDateString();
   const meuNome = quemSouEu === 'parceiro1' ? settings.apelido1 : settings.apelido2;
+  const outroNome = quemSouEu === 'parceiro1' ? settings.apelido2 : settings.apelido1;
 
   const [loading, setLoading] = useState(true);
   const [categoriaAtiva, setCategoriaAtiva] = useState('roles');
@@ -44,14 +46,13 @@ export default function TopicosTab({ quemSouEu, settings }) {
   const [jogosHoje, setJogosHoje] = useState([]);
   const [mensagens, setMensagens] = useState([]);
 
-  // Modais de confirmação
+  // Modais
   const [deleteModal, setDeleteModal] = useState({
     isOpen: false,
     type: null, // 'topico' | 'mensagem'
     id: null,
   });
 
-  // Modal Sorteador
   const [isRouletteOpen, setIsRouletteOpen] = useState(false);
 
   // Chat State
@@ -93,7 +94,7 @@ export default function TopicosTab({ quemSouEu, settings }) {
     }
   }
 
-  // Ações de Tópicos
+  // Tópicos
   async function handleAddTopico() {
     if (!novoTopicoTexto.trim()) return;
     try {
@@ -106,11 +107,11 @@ export default function TopicosTab({ quemSouEu, settings }) {
         parceiro: quemSouEu,
       });
       setNovoTopicoTexto('');
-      toast.success('Atividade adicionada aos planos de hoje!');
+      toast.success('Atividade adicionada com sucesso! 💜');
       carregarTudo();
     } catch (err) {
       console.error(err);
-      toast.error('Não consegui salvar o item agora.');
+      toast.error('Não consegui salvar agora.');
     }
   }
 
@@ -123,15 +124,11 @@ export default function TopicosTab({ quemSouEu, settings }) {
     }
   }
 
-  function confirmarExclusao(type, id) {
-    setDeleteModal({ isOpen: true, type, id });
-  }
-
   async function handleExecutarExclusao() {
     try {
       if (deleteModal.type === 'topico') {
         await excluirTopico(deleteModal.id);
-        toast.success('Item removido com sucesso!');
+        toast.success('Item removido!');
       } else if (deleteModal.type === 'mensagem') {
         await excluirMensagemConversa(deleteModal.id);
         toast.success('Mensagem apagada!');
@@ -144,11 +141,11 @@ export default function TopicosTab({ quemSouEu, settings }) {
     }
   }
 
-  // Ações de Jogar
+  // Jogar do dia
   async function handleResponderJogar(querJogar) {
     try {
       await responderJogarDoDia(quemSouEu, querJogar);
-      toast.love(querJogar ? '🎮 Boa! Avisado que você quer jogar hoje!' : 'Tudo bem, descansar também é ótimo! ✨');
+      toast.love(querJogar ? '🎮 Boa! Avisado que você quer jogar!' : 'Tudo bem, descansar também é ótimo! ✨');
       carregarTudo();
     } catch (err) {
       console.error(err);
@@ -156,14 +153,14 @@ export default function TopicosTab({ quemSouEu, settings }) {
     }
   }
 
-  // Ações de Chat
+  // Chat do dia
   async function handleEnviarChat() {
     if (!novoChatTexto.trim()) return;
     setEnviandoChat(true);
     try {
       await enviarMensagemConversa(quemSouEu, novoChatTexto.trim(), emojiChat);
       setNovoChatTexto('');
-      toast.love('Mensagem enviada com carinho! 💌');
+      toast.love('Recadinho enviado! 💌');
       carregarTudo();
     } catch (err) {
       console.error(err);
@@ -195,76 +192,110 @@ export default function TopicosTab({ quemSouEu, settings }) {
   }
 
   const topicosFiltrados = topicos.filter((t) => t.categoria === categoriaAtiva);
-  const catConfig = CATEGORIAS.find((c) => c.id === categoriaAtiva);
+  const catConfig = CATEGORIAS.find((c) => c.id === categoriaAtiva) || CATEGORIAS[0];
 
   const statusJogar1 = jogosHoje.find((j) => j.parceiro === 'parceiro1');
   const statusJogar2 = jogosHoje.find((j) => j.parceiro === 'parceiro2');
 
   return (
-    <div className="px-4 sm:px-6 pt-5 max-w-md mx-auto pb-12 animate-fadeIn">
-      <p className="badge-brut bg-purple text-ink mb-2">Planos & Conexão</p>
-      <h1 className="font-display text-2xl sm:text-3xl font-extrabold text-white mb-5">
+    <div className="px-3.5 sm:px-6 pt-4 max-w-md mx-auto pb-14 animate-fadeIn">
+      {/* Header Badge */}
+      <div className="flex items-center justify-between mb-2">
+        <p className="badge-brut bg-purple text-ink text-[10px]">
+          Planos & Sintonia 📋
+        </p>
+        <span className="text-[11px] font-extrabold text-white/80">
+          Hoje
+        </span>
+      </div>
+
+      <h1 className="font-display text-2xl sm:text-3xl font-extrabold text-white mb-4 leading-tight">
         O que vamos viver hoje?
       </h1>
 
       {/* Card "Você quer jogar hoje? 🎮" */}
-      <div className="card-brut p-4 mb-4 bg-yellow shadow-brut">
-        <p className="text-sm font-black text-ink mb-2">
-          Você quer jogar hoje? 🎮
-        </p>
-        <div className="flex gap-2">
+      <div className="card-brut p-4 mb-5 bg-yellow shadow-brut">
+        <div className="flex items-center justify-between mb-2">
+          <p className="text-xs font-black text-ink uppercase tracking-wide">
+            🎮 Bora Jogar Hoje?
+          </p>
+          <span className="text-[10px] font-extrabold text-ink/70">
+            Status ao vivo
+          </span>
+        </div>
+
+        <div className="grid grid-cols-2 gap-2 mb-3">
           <button
             onClick={() => handleResponderJogar(true)}
-            className="flex-1 py-2 rounded-full text-xs font-black border-3 border-ink bg-white text-ink hover:bg-ink hover:text-yellow transition shadow-brutsm active:scale-95"
+            className="py-2.5 px-2 rounded-xl text-xs font-black border-3 border-ink bg-white text-ink hover:bg-ink hover:text-yellow transition shadow-brutsm active:scale-98 flex items-center justify-center gap-1.5"
           >
-            Sim, vamos! ✅
+            <span>🎮</span>
+            <span>Sim, bora!</span>
           </button>
           <button
             onClick={() => handleResponderJogar(false)}
-            className="flex-1 py-2 rounded-full text-xs font-black border-3 border-ink bg-white text-ink hover:bg-ink hover:text-yellow transition shadow-brutsm active:scale-95"
+            className="py-2.5 px-2 rounded-xl text-xs font-black border-3 border-ink bg-white text-ink hover:bg-ink hover:text-yellow transition shadow-brutsm active:scale-98 flex items-center justify-center gap-1.5"
           >
-            Hoje não 💤
+            <span>💤</span>
+            <span>Hoje não</span>
           </button>
         </div>
 
-        <div className="text-xs font-extrabold text-ink/80 mt-3 pt-2 border-t-2 border-ink/20 flex justify-between">
-          <span>
-            {settings.apelido1}: {statusJogar1 ? (statusJogar1.quer_jogar ? 'Quer jogar ✅' : 'Não hoje 💤') : 'Ainda não respondeu'}
-          </span>
-          <span>
-            {settings.apelido2}: {statusJogar2 ? (statusJogar2.quer_jogar ? 'Quer jogar ✅' : 'Não hoje 💤') : 'Ainda não respondeu'}
-          </span>
+        {/* Respostas de Ambos */}
+        <div className="bg-white/80 rounded-xl p-2.5 border-2 border-ink/20 flex flex-col sm:flex-row gap-1.5 justify-between text-xs font-bold text-ink">
+          <div className="flex items-center gap-1.5">
+            <span>{settings.emoji1}</span>
+            <span className="truncate">{settings.apelido1}:</span>
+            <span className="font-black text-royal">
+              {statusJogar1 ? (statusJogar1.quer_jogar ? 'Quer jogar ✅' : 'Descansando 💤') : 'Ainda não respondeu'}
+            </span>
+          </div>
+          <div className="flex items-center gap-1.5">
+            <span>{settings.emoji2}</span>
+            <span className="truncate">{settings.apelido2}:</span>
+            <span className="font-black text-royal">
+              {statusJogar2 ? (statusJogar2.quer_jogar ? 'Quer jogar ✅' : 'Descansando 💤') : 'Ainda não respondeu'}
+            </span>
+          </div>
         </div>
       </div>
 
-      {/* Categorias Tabs + Sorteador */}
-      <div className="flex items-center justify-between gap-2 mb-3">
-        <div className="flex gap-1.5 overflow-x-auto scrollbar-none pb-1">
+      {/* Seletor Responsivo de Categorias (Wrap para nunca quebrar no mobile) */}
+      <div className="mb-3">
+        <div className="flex items-center justify-between gap-2 mb-2">
+          <span className="text-xs font-extrabold text-white">
+            Selecione o tema:
+          </span>
+          <button
+            onClick={() => setIsRouletteOpen(true)}
+            className="btn-brut px-3 py-1 bg-yellow text-ink text-xs shrink-0 shadow-brutsm flex items-center gap-1"
+            title="Sortear o que fazer"
+          >
+            🎲 Sortear Atividade
+          </button>
+        </div>
+
+        <div className="grid grid-cols-3 gap-1.5">
           {CATEGORIAS.map((cat) => {
             const isActive = categoriaAtiva === cat.id;
             return (
               <button
                 key={cat.id}
                 onClick={() => setCategoriaAtiva(cat.id)}
-                className={`shrink-0 flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-black border-3 border-ink transition shadow-brutsm ${
-                  isActive ? `${cat.cor} text-ink scale-102` : 'bg-white text-ink'
+                className={`py-2 px-1.5 rounded-xl text-center text-xs font-black border-3 border-ink transition-all shadow-brutsm ${
+                  isActive
+                    ? `${cat.cor} text-ink scale-102 shadow-brut`
+                    : 'bg-white text-ink/80 hover:bg-white'
                 }`}
               >
-                <span>{cat.emoji}</span>
-                <span>{cat.label}</span>
+                <span className="block text-base">{cat.emoji}</span>
+                <span className="block text-[10px] leading-tight truncate mt-0.5 font-extrabold">
+                  {cat.label}
+                </span>
               </button>
             );
           })}
         </div>
-
-        {/* Botão de Sortear Rolê */}
-        <button
-          onClick={() => setIsRouletteOpen(true)}
-          className="btn-brut px-2.5 py-1.5 bg-yellow text-ink text-xs shrink-0 shadow-brutsm"
-          title="Sortear o que fazer"
-        >
-          🎲 Sortear
-        </button>
       </div>
 
       {/* Input de Adicionar Tópico */}
@@ -273,75 +304,75 @@ export default function TopicosTab({ quemSouEu, settings }) {
           value={novoTopicoTexto}
           onChange={(e) => setNovoTopicoTexto(e.target.value)}
           onKeyDown={(e) => e.key === 'Enter' && handleAddTopico()}
-          placeholder={`Adicionar em ${catConfig.label}...`}
-          className="flex-1 rounded-full border-3 border-ink px-4 py-2 outline-none bg-white text-xs font-bold placeholder:text-ink/40 shadow-brutsm"
+          placeholder={`Adicionar ideia em ${catConfig.label}...`}
+          className="flex-1 rounded-xl border-3 border-ink px-3.5 py-2.5 outline-none bg-white text-xs font-bold placeholder:text-ink/40 shadow-brutsm min-w-0"
         />
         <button
           onClick={handleAddTopico}
-          className="btn-brut px-4 bg-ink text-white text-sm"
+          className="btn-brut px-4 bg-ink text-white text-base shrink-0 shadow-brutsm"
+          title="Adicionar"
         >
           +
         </button>
       </div>
 
-      {/* Lista de Itens da Categoria */}
+      {/* Lista de Atividades do Tema */}
       <div className="space-y-2 mb-8">
         {topicosFiltrados.length === 0 ? (
           <div className="card-brut p-4 text-center">
             <p className="text-xs text-ink/60 font-bold">
-              Nada planejado em {catConfig.label} para hoje ainda.
+              Nada planejado em {catConfig.label} para hoje. Adicione uma ideia acima! 💡
             </p>
           </div>
         ) : (
           topicosFiltrados.map((item) => (
             <div
               key={item.id}
-              className={`flex items-center gap-3 card-brut px-3.5 py-2.5 shadow-brutsm transition ${
+              className={`flex items-center gap-2.5 card-brut px-3.5 py-2.5 shadow-brutsm transition ${
                 item.concluida ? 'opacity-60 bg-white/70' : 'bg-white'
               }`}
             >
               <button
                 onClick={() => handleToggleTopico(item)}
-                className={`w-6 h-6 rounded-full border-3 border-ink flex items-center justify-center shrink-0 font-black text-xs ${
+                className={`w-6 h-6 rounded-lg border-3 border-ink flex items-center justify-center shrink-0 font-black text-xs ${
                   item.concluida ? `${catConfig.cor} text-ink` : 'bg-white'
                 }`}
+                title={item.concluida ? 'Marcar como não concluído' : 'Marcar como concluído'}
               >
                 {item.concluida && '✓'}
               </button>
 
               <div className="flex-1 min-w-0">
                 <span
-                  className={`block text-xs font-bold truncate ${
+                  className={`block text-xs font-bold break-words leading-tight ${
                     item.concluida ? 'line-through text-ink/50' : 'text-ink'
                   }`}
                 >
                   {item.titulo}
                 </span>
                 {item.adicionado_por && (
-                  <span className="block text-[9px] text-ink/40 font-normal">
+                  <span className="block text-[9px] text-ink/40 font-bold mt-0.5">
                     por {item.adicionado_por}
                   </span>
                 )}
               </div>
 
-              {item.parceiro === quemSouEu && (
-                <button
-                  onClick={() => confirmarExclusao('topico', item.id)}
-                  className="text-ink/40 hover:text-pink font-black text-base px-1"
-                  aria-label="Excluir"
-                >
-                  ✕
-                </button>
-              )}
+              <button
+                onClick={() => setDeleteModal({ isOpen: true, type: 'topico', id: item.id })}
+                className="text-ink/30 hover:text-pink font-black text-base px-1 shrink-0"
+                aria-label="Excluir item"
+              >
+                ✕
+              </button>
             </div>
           ))
         )}
       </div>
 
-      {/* Conversas do Dia (Chat / Reflexões) */}
+      {/* Conversas do Dia (Feed de Recados) */}
       <div className="border-t-3 border-white/20 pt-6">
         <h2 className="font-display font-extrabold text-white text-xl mb-3 flex items-center gap-2">
-          💬 Conversas do Dia
+          💬 Recados & Conversas do Dia
         </h2>
 
         {/* Input Chat */}
@@ -349,19 +380,20 @@ export default function TopicosTab({ quemSouEu, settings }) {
           <textarea
             value={novoChatTexto}
             onChange={(e) => setNovoChatTexto(e.target.value)}
-            placeholder="Deixe um recado, ideia ou como foi o seu dia..."
+            placeholder={`Deixe um recado carinhoso para ${outroNome}...`}
             rows={2}
             className="w-full rounded-xl border-3 border-ink px-3 py-2 outline-none bg-white text-xs resize-none font-medium mb-2.5 placeholder:text-ink/40"
           />
 
-          <div className="flex items-center justify-between gap-2">
-            <div className="flex gap-1 overflow-x-auto pb-0.5">
+          <div className="flex items-center justify-between gap-2 flex-wrap sm:flex-nowrap">
+            {/* Emojis rápidos */}
+            <div className="flex gap-1 overflow-x-auto scrollbar-none pb-1 max-w-full">
               {EMOJIS_CHAT.map((em) => (
                 <button
                   key={em}
                   type="button"
                   onClick={() => setEmojiChat(em)}
-                  className={`w-7 h-7 rounded-full text-sm border-2 transition ${
+                  className={`w-7 h-7 rounded-full text-sm border-2 shrink-0 transition ${
                     emojiChat === em
                       ? 'border-ink bg-yellow scale-110'
                       : 'border-transparent hover:bg-ink/5'
@@ -375,30 +407,30 @@ export default function TopicosTab({ quemSouEu, settings }) {
             <button
               onClick={handleEnviarChat}
               disabled={enviandoChat}
-              className="btn-brut px-4 py-2 bg-pink text-ink text-xs disabled:opacity-50 shrink-0"
+              className="btn-brut px-4 py-2 bg-pink text-ink text-xs disabled:opacity-50 shrink-0 w-full sm:w-auto shadow-brutsm"
             >
               {enviandoChat ? 'Enviando...' : 'Enviar 💌'}
             </button>
           </div>
         </div>
 
-        {/* Feed de Mensagens */}
+        {/* Feed de Recados */}
         <div className="space-y-2.5">
           {mensagens.length === 0 ? (
             <p className="text-center text-xs text-white/70 font-medium py-4">
-              Nenhuma conversa registrada hoje. Mande um recadinho! 💌
+              Nenhum recadinho ainda hoje. Seja o primeiro a mandar! 💌
             </p>
           ) : (
             mensagens.map((msg) => {
-              const ehEu = msg.parceiro === quemSouEu;
               const autorNome = msg.parceiro === 'parceiro1' ? settings.apelido1 : settings.apelido2;
+              const autorEmoji = msg.parceiro === 'parceiro1' ? settings.emoji1 : settings.emoji2;
               const corBadge = msg.parceiro === 'parceiro1' ? 'bg-yellow' : 'bg-pink';
 
               return (
                 <div key={msg.id} className="card-brut px-4 py-3 shadow-brutsm">
                   <div className="flex items-center justify-between mb-1.5">
                     <span className={`badge-brut ${corBadge} text-ink text-[10px]`}>
-                      {msg.emoji} {autorNome}
+                      {msg.emoji} {autorEmoji} {autorNome}
                     </span>
 
                     <div className="flex items-center gap-2">
@@ -407,22 +439,23 @@ export default function TopicosTab({ quemSouEu, settings }) {
                         {msg.editado && ' · editado'}
                       </span>
 
-                      {ehEu && editandoMsgId !== msg.id && (
+                      {/* Botões de Ação para Ambos */}
+                      {editandoMsgId !== msg.id && (
                         <div className="flex gap-1">
                           <button
                             onClick={() => {
                               setEditandoMsgId(msg.id);
                               setTextoEdicao(msg.texto);
                             }}
-                            className="text-ink/40 hover:text-royal text-xs px-1"
-                            title="Editar"
+                            className="text-ink/40 hover:text-royal text-xs p-0.5"
+                            title="Editar mensagem"
                           >
                             ✏️
                           </button>
                           <button
-                            onClick={() => confirmarExclusao('mensagem', msg.id)}
-                            className="text-ink/40 hover:text-pink text-xs px-1"
-                            title="Excluir"
+                            onClick={() => setDeleteModal({ isOpen: true, type: 'mensagem', id: msg.id })}
+                            className="text-ink/40 hover:text-pink text-xs p-0.5"
+                            title="Excluir mensagem"
                           >
                             🗑️
                           </button>
@@ -453,7 +486,7 @@ export default function TopicosTab({ quemSouEu, settings }) {
                       </button>
                     </div>
                   ) : (
-                    <p className="text-xs text-ink font-semibold leading-relaxed">
+                    <p className="text-xs text-ink font-semibold leading-relaxed break-words">
                       {msg.texto}
                     </p>
                   )}

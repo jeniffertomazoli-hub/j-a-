@@ -17,7 +17,7 @@ function GaugeChart({ pct }) {
   const offset = circumference - (pct / 100) * circumference;
 
   return (
-    <svg viewBox="0 0 120 120" className="w-32 h-32 select-none">
+    <svg viewBox="0 0 120 120" className="w-28 h-28 sm:w-32 sm:h-32 select-none">
       <circle
         cx="60"
         cy="60"
@@ -81,7 +81,7 @@ export default function PainelTab({ quemSouEu, settings }) {
   }, []);
 
   const ultimosRegistros = useMemo(() => {
-    return historico.slice(-5).reverse();
+    return historico.slice(-6).reverse();
   }, [historico]);
 
   const stats = useMemo(() => {
@@ -140,9 +140,18 @@ export default function PainelTab({ quemSouEu, settings }) {
   }
 
   return (
-    <div className="px-4 sm:px-6 pt-5 max-w-2xl mx-auto pb-12 animate-fadeIn">
-      <p className="badge-brut bg-cyan text-ink mb-2">Painel de Insights 📊</p>
-      <h1 className="font-display text-2xl sm:text-3xl font-extrabold text-white mb-5">
+    <div className="px-3.5 sm:px-6 pt-4 max-w-2xl mx-auto pb-14 animate-fadeIn">
+      {/* Header Badge */}
+      <div className="flex items-center justify-between mb-2">
+        <p className="badge-brut bg-cyan text-ink text-[10px]">
+          Painel de Insights 📊
+        </p>
+        <span className="text-[11px] font-extrabold text-white/80">
+          {settings.apelido1} & {settings.apelido2}
+        </span>
+      </div>
+
+      <h1 className="font-display text-2xl sm:text-3xl font-extrabold text-white mb-5 leading-tight">
         Insights do Casal
       </h1>
 
@@ -150,8 +159,8 @@ export default function PainelTab({ quemSouEu, settings }) {
         <div className="grid sm:grid-cols-2 gap-4">
           {/* Card Compatibilidade */}
           <div className="card-brut p-5 flex flex-col items-center text-center shadow-brut">
-            <span className="badge-brut bg-cyan text-ink mb-3">
-              Humor do Casal
+            <span className="badge-brut bg-cyan text-ink text-[10px] mb-3">
+              Humor Médio
             </span>
             <GaugeChart pct={sintoniaScore} />
             <p className="text-xs font-black text-ink/70 mt-2">
@@ -160,17 +169,17 @@ export default function PainelTab({ quemSouEu, settings }) {
             <p className="text-2xl mt-2 select-none">💜 ✨ 😊</p>
             <p className="text-xs text-ink/70 font-medium mt-2 leading-relaxed">
               {sintoniaScore >= 80
-                ? 'Vocês estão em sintonia altíssima nesta semana! Continuem cultivando esses momentos.'
+                ? `${settings.apelido1} e ${settings.apelido2}, vocês estão com excelente harmonia nesta semana!`
                 : 'Acompanhem a evolução diária dos sentimentos e planejem um momento especial juntos!'}
             </p>
           </div>
 
           {/* Card Últimas Respostas Lado a Lado */}
-          <div className="card-brut p-5 shadow-brut">
+          <div className="card-brut p-4 sm:p-5 shadow-brut">
             <p className="font-display font-extrabold text-ink mb-3 text-sm">
               Últimas Respostas Lado a Lado
             </p>
-            <div className="space-y-3">
+            <div className="space-y-2.5">
               {ultimosRegistros.length === 0 ? (
                 <p className="text-xs text-ink/60 font-medium">
                   Ainda não há registros suficientes.
@@ -191,7 +200,7 @@ export default function PainelTab({ quemSouEu, settings }) {
                         </span>
                         {temAmbos && (
                           <span
-                            className={`badge-brut text-[9px] ${
+                            className={`badge-brut text-[8px] py-0.5 px-2 ${
                               sintoniaOk ? 'bg-cyan' : 'bg-pink'
                             } text-ink`}
                           >
@@ -200,12 +209,12 @@ export default function PainelTab({ quemSouEu, settings }) {
                         )}
                       </div>
 
-                      <div className="flex gap-2">
-                        <span className="flex-1 badge-brut bg-yellow text-ink text-[10px] justify-center py-1 truncate block text-center">
-                          {settings.apelido1}: {item.parceiro1 ?? '—'}
+                      <div className="grid grid-cols-2 gap-1.5">
+                        <span className="badge-brut bg-yellow text-ink text-[10px] justify-center py-1 truncate text-center">
+                          {settings.emoji1} {settings.apelido1}: {item.parceiro1 ?? '—'}
                         </span>
-                        <span className="flex-1 badge-brut bg-pink text-ink text-[10px] justify-center py-1 truncate block text-center">
-                          {settings.apelido2}: {item.parceiro2 ?? '—'}
+                        <span className="badge-brut bg-pink text-ink text-[10px] justify-center py-1 truncate text-center">
+                          {settings.emoji2} {settings.apelido2}: {item.parceiro2 ?? '—'}
                         </span>
                       </div>
                     </div>
@@ -224,16 +233,16 @@ export default function PainelTab({ quemSouEu, settings }) {
       )}
 
       {/* Conquistas do Casal */}
-      <h2 className="font-display font-extrabold text-white text-lg mt-8 mb-3">
+      <h2 className="font-display font-extrabold text-white text-lg mt-7 mb-3">
         Conquistas do Casal 🏆
       </h2>
 
       <div className="card-brut p-4 shadow-brut">
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
           {conquistas.map((c) => (
             <div
               key={c.id}
-              className={`rounded-2xl border-3 border-ink p-3.5 flex items-center gap-3 transition shadow-brutsm ${
+              className={`rounded-2xl border-3 border-ink p-3 flex items-center gap-3 transition shadow-brutsm ${
                 c.desbloqueada ? 'bg-white' : 'bg-white/40 opacity-50'
               }`}
             >

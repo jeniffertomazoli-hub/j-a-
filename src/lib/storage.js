@@ -3,8 +3,8 @@ const PROFILE_KEY = 'termometro-felicidade:quem-sou-eu';
 const SETTINGS_KEY = 'sintonia:configuracoes-casal';
 
 export const DEFAULT_COUPLE_SETTINGS = {
-  apelido1: 'Parceiro(a) 1',
-  apelido2: 'Parceiro(a) 2',
+  apelido1: 'Jeniffer',
+  apelido2: 'Alvaro',
   emoji1: '🐰',
   emoji2: '🦊',
   dataInicio: '', // 'AAAA-MM-DD'
@@ -39,7 +39,14 @@ export function getCoupleSettings() {
   try {
     const raw = localStorage.getItem(SETTINGS_KEY);
     if (!raw) return DEFAULT_COUPLE_SETTINGS;
-    return { ...DEFAULT_COUPLE_SETTINGS, ...JSON.parse(raw) };
+    const parsed = JSON.parse(raw);
+    return {
+      ...DEFAULT_COUPLE_SETTINGS,
+      ...parsed,
+      // Garante que se ainda estiver com os nomes genéricos antigos, use Jeniffer e Alvaro
+      apelido1: parsed.apelido1 && parsed.apelido1 !== 'Parceiro(a) 1' && parsed.apelido1 !== 'Parceiro 1' ? parsed.apelido1 : 'Jeniffer',
+      apelido2: parsed.apelido2 && parsed.apelido2 !== 'Parceiro(a) 2' && parsed.apelido2 !== 'Parceiro 2' ? parsed.apelido2 : 'Alvaro',
+    };
   } catch {
     return DEFAULT_COUPLE_SETTINGS;
   }
@@ -62,7 +69,6 @@ export function calculateDaysTogether(startDateString) {
   const diffTime = Math.abs(now - start);
   const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
 
-  // Anos, meses e dias aproximados
   let years = now.getFullYear() - start.getFullYear();
   let months = now.getMonth() - start.getMonth();
   let days = now.getDate() - start.getDate();
