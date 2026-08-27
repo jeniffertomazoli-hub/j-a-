@@ -18,9 +18,9 @@ import Modal from '../Modal';
 import RouletteModal from '../RouletteModal';
 
 const CATEGORIAS = [
-  { id: 'roles', label: 'Rolês & Passeios', emoji: '🚶', cor: 'bg-cyan', borda: 'border-cyan' },
-  { id: 'filmes', label: 'Filmes & Séries', emoji: '🎬', cor: 'bg-pink', borda: 'border-pink' },
-  { id: 'casa', label: 'Em Casa', emoji: '🏡', cor: 'bg-purple', borda: 'border-purple' },
+  { id: 'roles', label: 'Rolês & Passeios', emoji: '🚶', cor: 'bg-cyan' },
+  { id: 'filmes', label: 'Filmes & Séries', emoji: '🎬', cor: 'bg-pink' },
+  { id: 'casa', label: 'Em Casa', emoji: '🏡', cor: 'bg-purple' },
 ];
 
 const EMOJIS_CHAT = ['🥰', '😊', '😌', '😐', '😕', '😢', '😤', '🍿', '🎮', '💜'];
@@ -49,7 +49,7 @@ export default function TopicosTab({ quemSouEu, settings }) {
   // Modais
   const [deleteModal, setDeleteModal] = useState({
     isOpen: false,
-    type: null, // 'topico' | 'mensagem'
+    type: null,
     id: null,
   });
 
@@ -62,7 +62,6 @@ export default function TopicosTab({ quemSouEu, settings }) {
   const [editandoMsgId, setEditandoMsgId] = useState(null);
   const [textoEdicao, setTextoEdicao] = useState('');
 
-  // Carrega e assina Realtime
   useEffect(() => {
     carregarTudo();
 
@@ -94,7 +93,6 @@ export default function TopicosTab({ quemSouEu, settings }) {
     }
   }
 
-  // Tópicos
   async function handleAddTopico() {
     if (!novoTopicoTexto.trim()) return;
     try {
@@ -107,7 +105,7 @@ export default function TopicosTab({ quemSouEu, settings }) {
         parceiro: quemSouEu,
       });
       setNovoTopicoTexto('');
-      toast.success('Atividade adicionada com sucesso! 💜');
+      toast.success('Atividade adicionada aos planos de hoje! 💜');
       carregarTudo();
     } catch (err) {
       console.error(err);
@@ -141,11 +139,10 @@ export default function TopicosTab({ quemSouEu, settings }) {
     }
   }
 
-  // Jogar do dia
   async function handleResponderJogar(querJogar) {
     try {
       await responderJogarDoDia(quemSouEu, querJogar);
-      toast.love(querJogar ? '🎮 Boa! Avisado que você quer jogar!' : 'Tudo bem, descansar também é ótimo! ✨');
+      toast.love(querJogar ? '🎮 Avisado que você quer jogar hoje!' : 'Tudo bem, descansar também é ótimo! ✨');
       carregarTudo();
     } catch (err) {
       console.error(err);
@@ -153,7 +150,6 @@ export default function TopicosTab({ quemSouEu, settings }) {
     }
   }
 
-  // Chat do dia
   async function handleEnviarChat() {
     if (!novoChatTexto.trim()) return;
     setEnviandoChat(true);
@@ -198,7 +194,7 @@ export default function TopicosTab({ quemSouEu, settings }) {
   const statusJogar2 = jogosHoje.find((j) => j.parceiro === 'parceiro2');
 
   return (
-    <div className="px-3.5 sm:px-6 pt-4 max-w-md mx-auto pb-14 animate-fadeIn">
+    <div className="px-3 sm:px-6 pt-4 max-w-md mx-auto pb-14 animate-fadeIn">
       {/* Header Badge */}
       <div className="flex items-center justify-between mb-2">
         <p className="badge-brut bg-purple text-ink text-[10px]">
@@ -215,16 +211,17 @@ export default function TopicosTab({ quemSouEu, settings }) {
 
       {/* Card "Você quer jogar hoje? 🎮" */}
       <div className="card-brut p-4 mb-5 bg-yellow shadow-brut">
-        <div className="flex items-center justify-between mb-2">
-          <p className="text-xs font-black text-ink uppercase tracking-wide">
-            🎮 Bora Jogar Hoje?
+        <div className="flex items-center justify-between mb-2.5">
+          <p className="text-xs font-black text-ink uppercase tracking-wide flex items-center gap-1">
+            <span>🎮</span> Bora Jogar Hoje?
           </p>
-          <span className="text-[10px] font-extrabold text-ink/70">
-            Status ao vivo
+          <span className="badge-brut bg-white text-ink text-[9px]">
+            Ao vivo
           </span>
         </div>
 
-        <div className="grid grid-cols-2 gap-2 mb-3">
+        {/* Botões de Ação */}
+        <div className="grid grid-cols-2 gap-2 mb-3.5">
           <button
             onClick={() => handleResponderJogar(true)}
             className="py-2.5 px-2 rounded-xl text-xs font-black border-3 border-ink bg-white text-ink hover:bg-ink hover:text-yellow transition shadow-brutsm active:scale-98 flex items-center justify-center gap-1.5"
@@ -241,26 +238,61 @@ export default function TopicosTab({ quemSouEu, settings }) {
           </button>
         </div>
 
-        {/* Respostas de Ambos */}
-        <div className="bg-white/80 rounded-xl p-2.5 border-2 border-ink/20 flex flex-col sm:flex-row gap-1.5 justify-between text-xs font-bold text-ink">
-          <div className="flex items-center gap-1.5">
-            <span>{settings.emoji1}</span>
-            <span className="truncate">{settings.apelido1}:</span>
-            <span className="font-black text-royal">
-              {statusJogar1 ? (statusJogar1.quer_jogar ? 'Quer jogar ✅' : 'Descansando 💤') : 'Ainda não respondeu'}
+        {/* Status de Ambos - 100% Responsivo e sem cortes */}
+        <div className="space-y-2">
+          {/* Jeniffer */}
+          <div className="bg-white rounded-xl p-2.5 border-2 border-ink shadow-brutsm flex items-center justify-between gap-2">
+            <div className="flex items-center gap-1.5 min-w-0">
+              <span className="text-lg shrink-0">{settings.emoji1 || '🐰'}</span>
+              <span className="text-xs font-black text-ink truncate">
+                {settings.apelido1}:
+              </span>
+            </div>
+            <span
+              className={`badge-brut text-[10px] shrink-0 ${
+                statusJogar1
+                  ? statusJogar1.quer_jogar
+                    ? 'bg-cyan text-ink'
+                    : 'bg-pink text-white'
+                  : 'bg-ink/10 text-ink/70'
+              }`}
+            >
+              {statusJogar1
+                ? statusJogar1.quer_jogar
+                  ? 'Quer jogar ✅'
+                  : 'Descansando 💤'
+                : 'Ainda não respondeu'}
             </span>
           </div>
-          <div className="flex items-center gap-1.5">
-            <span>{settings.emoji2}</span>
-            <span className="truncate">{settings.apelido2}:</span>
-            <span className="font-black text-royal">
-              {statusJogar2 ? (statusJogar2.quer_jogar ? 'Quer jogar ✅' : 'Descansando 💤') : 'Ainda não respondeu'}
+
+          {/* Alvaro */}
+          <div className="bg-white rounded-xl p-2.5 border-2 border-ink shadow-brutsm flex items-center justify-between gap-2">
+            <div className="flex items-center gap-1.5 min-w-0">
+              <span className="text-lg shrink-0">{settings.emoji2 || '🦊'}</span>
+              <span className="text-xs font-black text-ink truncate">
+                {settings.apelido2}:
+              </span>
+            </div>
+            <span
+              className={`badge-brut text-[10px] shrink-0 ${
+                statusJogar2
+                  ? statusJogar2.quer_jogar
+                    ? 'bg-cyan text-ink'
+                    : 'bg-pink text-white'
+                  : 'bg-ink/10 text-ink/70'
+              }`}
+            >
+              {statusJogar2
+                ? statusJogar2.quer_jogar
+                  ? 'Quer jogar ✅'
+                  : 'Descansando 💤'
+                : 'Ainda não respondeu'}
             </span>
           </div>
         </div>
       </div>
 
-      {/* Seletor Responsivo de Categorias (Wrap para nunca quebrar no mobile) */}
+      {/* Seletor Responsivo de Temas */}
       <div className="mb-3">
         <div className="flex items-center justify-between gap-2 mb-2">
           <span className="text-xs font-extrabold text-white">
@@ -282,7 +314,7 @@ export default function TopicosTab({ quemSouEu, settings }) {
               <button
                 key={cat.id}
                 onClick={() => setCategoriaAtiva(cat.id)}
-                className={`py-2 px-1.5 rounded-xl text-center text-xs font-black border-3 border-ink transition-all shadow-brutsm ${
+                className={`py-2 px-1 rounded-xl text-center text-xs font-black border-3 border-ink transition-all shadow-brutsm ${
                   isActive
                     ? `${cat.cor} text-ink scale-102 shadow-brut`
                     : 'bg-white text-ink/80 hover:bg-white'
