@@ -4,7 +4,13 @@ import {
   getActiveProfile,
   setActiveProfile,
   getCoupleSettings,
+  saveCoupleSettings,
 } from './lib/storage';
+import {
+  buscarConfiguracoesCasalNuvem,
+  salvarConfiguracoesCasalNuvem,
+  subscribeToTable,
+} from './lib/supabase';
 import { ToastProvider } from './context/ToastContext';
 import { useNotificationWatcher } from './hooks/useNotificationWatcher';
 import PinLock from './components/PinLock';
@@ -29,6 +35,25 @@ export function AppContent() {
   const [settings, setSettings] = useState(getCoupleSettings());
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
 
+  // Sincroniza configurações e fotos de perfil em nuvem (Supabase)
+  useEffect(() => {
+    async function carregarSettingsNuvem() {
+      const nuvem = await buscarConfiguracoesCasalNuvem();
+      if (nuvem) {
+        const local = getCoupleSettings();
+        const merged = { ...local, ...nuvem };
+        saveCoupleSettings(merged);
+        setSettings(merged);
+      }
+    }
+    carregarSettingsNuvem();
+
+    const unsub = subscribeToTable('configuracoes_casal', () => {
+      carregarSettingsNuvem();
+    });
+    return () => unsub();
+  }, []);
+
   // Monitora e dispara notificações em tempo real para ações do parceiro
   useNotificationWatcher(quemSouEu, settings);
 
@@ -40,6 +65,11 @@ export function AppContent() {
   function handleTrocarPerfil() {
     setActiveProfile(null);
     setQuemSouEu(null);
+  }
+
+  function handleSettingsUpdated(updated) {
+    setSettings(updated);
+    salvarConfiguracoesCasalNuvem(updated);
   }
 
   if (!autenticado) {
@@ -73,7 +103,11 @@ export function AppContent() {
 
       <main className="flex-1">
         {tabAtiva === 'termometro' && (
-          <TermometroTab quemSouEu={quemSouEu} settings={settings} />
+          <TermometroTab
+            quemSouEu={quemSouEu}
+            settings={settings}
+            onIrParaFeed={() => setTabAtiva('feed')}
+          />
         )}
         {tabAtiva === 'feed' && (
           <FeedTab quemSouEu={quemSouEu} settings={settings} />
@@ -102,7 +136,7 @@ export function AppContent() {
         isOpen={isSettingsOpen}
         onClose={() => setIsSettingsOpen(false)}
         settings={settings}
-        onSettingsUpdated={(updated) => setSettings(updated)}
+        onSettingsUpdated={handleSettingsUpdated}
       />
     </div>
   );

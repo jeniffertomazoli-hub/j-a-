@@ -12,21 +12,90 @@ export function getTodayDateString() {
 }
 
 // -------------------------------------------------------------
-// TERMÔMETRO / DIÁRIO ÍNTIMO
+// ⚙️ CONFIGURAÇÕES DO CASAL SINCRONIZADAS EM NUVEM
+// -------------------------------------------------------------
+export async function salvarConfiguracoesCasalNuvem(settings) {
+  try {
+    const { error } = await supabase.from('configuracoes_casal').upsert({
+      id: 'casal_principal',
+      apelido1: settings.apelido1 || 'Jeniffer',
+      emoji1: settings.emoji1 || '🐰',
+      foto1: settings.foto1 || '',
+      apelido2: settings.apelido2 || 'Alvaro',
+      emoji2: settings.emoji2 || '🦊',
+      foto2: settings.foto2 || '',
+      data_inicio: settings.dataInicio || '',
+      pin_code: settings.pinCode || '1234',
+      atualizado_em: new Date().toISOString(),
+    });
+    if (error) console.warn('Aviso: configuracoes_casal no supabase:', error.message);
+  } catch (err) {
+    console.warn('Erro ao salvar settings em nuvem:', err);
+  }
+}
+
+export async function buscarConfiguracoesCasalNuvem() {
+  try {
+    const { data, error } = await supabase
+      .from('configuracoes_casal')
+      .select('*')
+      .eq('id', 'casal_principal')
+      .single();
+
+    if (error || !data) return null;
+    return {
+      apelido1: data.apelido1 || 'Jeniffer',
+      emoji1: data.emoji1 || '🐰',
+      foto1: data.foto1 || '',
+      apelido2: data.apelido2 || 'Alvaro',
+      emoji2: data.emoji2 || '🦊',
+      foto2: data.foto2 || '',
+      dataInicio: data.data_inicio || '',
+      pinCode: data.pin_code || '1234',
+    };
+  } catch {
+    return null;
+  }
+}
+
+// -------------------------------------------------------------
+// TERMÔMETRO / DIÁRIO ÍNTIMO DE HUMOR
 // -------------------------------------------------------------
 export async function salvarRespostaDiaria(parceiro, { nivel, motivo }) {
   const { error } = await supabase.from('respostas_diarias').insert({
     data: getTodayDateString(),
     parceiro,
-    respostas: { nivel, motivo },
+    respostas: { nivel, motivo, reacoes: {} },
   });
   if (error) throw error;
 }
 
-export async function editarRespostaDiaria(id, { nivel, motivo }) {
+export async function reagirRespostaDiaria(id, parceiro, emoji, respostasAtuais = {}) {
+  const objReacoes = typeof respostasAtuais.reacoes === 'object' && respostasAtuais.reacoes !== null
+    ? { ...respostasAtuais.reacoes }
+    : {};
+
+  if (objReacoes[parceiro] === emoji) {
+    delete objReacoes[parceiro];
+  } else {
+    objReacoes[parceiro] = emoji;
+  }
+
+  const novasRespostas = { ...respostasAtuais, reacoes: objReacoes };
+
   const { error } = await supabase
     .from('respostas_diarias')
-    .update({ respostas: { nivel, motivo } })
+    .update({ respostas: novasRespostas })
+    .eq('id', id);
+
+  if (error) throw error;
+  return objReacoes;
+}
+
+export async function editarRespostaDiaria(id, { nivel, motivo, reacoes = {} }) {
+  const { error } = await supabase
+    .from('respostas_diarias')
+    .update({ respostas: { nivel, motivo, reacoes } })
     .eq('id', id);
   if (error) throw error;
 }
@@ -122,14 +191,12 @@ export async function reagirPostFeed(postId, parceiro, emoji, reacoesAtuais = {}
     ? { ...reacoesAtuais }
     : {};
 
-  // Se já tinha esse emoji, remove (toggle); se era outro ou não tinha, define
   if (objReacoes[parceiro] === emoji) {
     delete objReacoes[parceiro];
   } else {
     objReacoes[parceiro] = emoji;
   }
 
-  // Sincroniza também com a lista de curtidas
   const curtidasArray = Object.keys(objReacoes);
 
   const { error } = await supabase
@@ -138,7 +205,6 @@ export async function reagirPostFeed(postId, parceiro, emoji, reacoesAtuais = {}
     .eq('id', postId);
 
   if (error) {
-    // Se a coluna reacoes não existir ainda, atualiza apenas curtidas
     await alternarCurtidaPost(postId, parceiro);
   }
 

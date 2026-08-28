@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
+import confetti from 'canvas-confetti';
 import {
   salvarRespostaDiaria,
+  reagirRespostaDiaria,
   editarRespostaDiaria,
   excluirRespostaDiaria,
   buscarRespostasDiarias,
@@ -11,6 +13,8 @@ import {
 import { useToast } from '../../context/ToastContext';
 import Modal from '../Modal';
 import Avatar from '../Avatar';
+
+const EMOJIS_REACAO = ['❤️', '😍', '🥺', '😊', '🫂', '🔥', '✨'];
 
 function getMoodEmoji(level) {
   if (level >= 90) return '🥰';
@@ -67,7 +71,7 @@ function temRespostaValida(item) {
   );
 }
 
-export default function TermometroTab({ quemSouEu, settings }) {
+export default function TermometroTab({ quemSouEu, settings, onIrParaFeed }) {
   const toast = useToast();
   const ehP1 = quemSouEu === 'parceiro1';
   const meuNome = ehP1 ? settings.apelido1 : settings.apelido2;
@@ -83,6 +87,9 @@ export default function TermometroTab({ quemSouEu, settings }) {
   const [respostas, setRespostas] = useState([]);
   const [nivel, setNivel] = useState(80);
   const [motivo, setMotivo] = useState('');
+
+  // Reação aberta por card
+  const [reacaoAbertaId, setReacaoAbertaId] = useState(null);
 
   // Modais de Edição e Exclusão
   const [editModal, setEditModal] = useState({
@@ -133,7 +140,7 @@ export default function TermometroTab({ quemSouEu, settings }) {
     try {
       await salvarRespostaDiaria(quemSouEu, { nivel, motivo });
       setMotivo('');
-      toast.love('Momento registrado com sucesso! 💜');
+      toast.love('Momento de humor registrado! 💜');
       carregar();
     } catch (err) {
       console.error(err);
@@ -143,12 +150,36 @@ export default function TermometroTab({ quemSouEu, settings }) {
     }
   }
 
+  async function handleReagirMomento(item, emoji) {
+    setReacaoAbertaId(null);
+    const reacoes = item.respostas?.reacoes || {};
+    const jaReagiuComEsse = reacoes[quemSouEu] === emoji;
+
+    if (!jaReagiuComEsse) {
+      confetti({
+        particleCount: 35,
+        spread: 45,
+        origin: { y: 0.7 },
+        colors: ['#FF4D97', '#FFD93D', '#33DDF3'],
+      });
+      toast.love(`Você reagiu com ${emoji}!`);
+    }
+
+    try {
+      await reagirRespostaDiaria(item.id, quemSouEu, emoji, item.respostas || {});
+      carregar();
+    } catch (err) {
+      console.error('Erro ao reagir ao humor:', err);
+    }
+  }
+
   function handleAbrirEdicao(item) {
     setEditModal({
       isOpen: true,
       id: item.id,
       nivel: item.respostas?.nivel ?? 80,
       motivo: item.respostas?.motivo ?? '',
+      reacoes: item.respostas?.reacoes || {},
     });
   }
 
@@ -158,6 +189,7 @@ export default function TermometroTab({ quemSouEu, settings }) {
       await editarRespostaDiaria(editModal.id, {
         nivel: editModal.nivel,
         motivo: editModal.motivo,
+        reacoes: editModal.reacoes || {},
       });
       toast.success('Momento atualizado com sucesso!');
       setEditModal({ isOpen: false, id: null, nivel: 80, motivo: '' });
@@ -172,7 +204,7 @@ export default function TermometroTab({ quemSouEu, settings }) {
     if (!deleteModal.id) return;
     try {
       await excluirRespostaDiaria(deleteModal.id);
-      toast.success('Momento excluído do feed!');
+      toast.success('Momento excluído!');
       setDeleteModal({ isOpen: false, id: null });
       carregar();
     } catch (err) {
@@ -198,7 +230,7 @@ export default function TermometroTab({ quemSouEu, settings }) {
       {/* Header Badge */}
       <div className="flex items-center justify-between mb-2">
         <p className="badge-brut bg-yellow text-ink text-[10px]">
-          Diário Íntimo 💜
+          Termômetro de Humor 🌡️
         </p>
         <span className="text-[11px] font-extrabold text-white/80">
           {settings.apelido1} & {settings.apelido2}
@@ -208,9 +240,28 @@ export default function TermometroTab({ quemSouEu, settings }) {
       <h1 className="font-display text-2xl sm:text-3xl font-extrabold text-white mb-1 leading-tight">
         Como está o coração agora?
       </h1>
-      <p className="text-xs text-white/80 font-medium mb-4">
-        Registre como você está se sentindo para que {outroNome} veja no feed em tempo real.
+      <p className="text-xs text-white/80 font-medium mb-3">
+        Registre seu humor e veja como {outroNome} está se sentindo hoje.
       </p>
+
+      {/* Banner de Atalho para o Feed de Fotos */}
+      {onIrParaFeed && (
+        <div
+          onClick={onIrParaFeed}
+          className="card-brut p-2.5 mb-4 bg-pink text-ink shadow-brut flex items-center justify-between cursor-pointer hover:scale-101 transition active:scale-98"
+        >
+          <div className="flex items-center gap-2">
+            <span className="text-xl">📸</span>
+            <div>
+              <p className="text-xs font-black">Feed de Fotos & Pensamentos</p>
+              <p className="text-[10px] text-ink/75 font-bold">Toque aqui para ver o Feed estilo Instagram 💜</p>
+            </div>
+          </div>
+          <span className="btn-brut py-1 px-2.5 bg-yellow text-ink text-[10px] font-black">
+            Ver Feed →
+          </span>
+        </div>
+      )}
 
       {/* Card Sintonia do Casal */}
       {sintoniaAtual !== null && (
@@ -292,14 +343,14 @@ export default function TermometroTab({ quemSouEu, settings }) {
           disabled={salvando}
           className="btn-brut mt-3 w-full py-3 bg-yellow text-ink text-xs font-black disabled:opacity-50 shadow-brut"
         >
-          {salvando ? 'Registrando...' : '💜 Publicar no Feed do Casal'}
+          {salvando ? 'Registrando...' : '💜 Publicar Humor do Momento'}
         </button>
       </div>
 
-      {/* Feed Íntimo de Momentos */}
+      {/* Histórico de Humor com Reações */}
       <div className="flex items-center justify-between mb-3">
         <h2 className="font-display font-extrabold text-white text-lg flex items-center gap-1.5">
-          💌 Feed do Casal
+          📊 Histórico de Humor
         </h2>
         <span className="text-[11px] font-bold text-white/70">
           {respostas.length} momento(s)
@@ -310,7 +361,7 @@ export default function TermometroTab({ quemSouEu, settings }) {
         {respostas.length === 0 ? (
           <div className="card-brut p-6 text-center shadow-brut">
             <p className="text-xs text-ink/60 font-bold">
-              Nenhum momento registrado ainda. Publique como está seu dia acima! ✨
+              Nenhum momento registrado ainda. Registre seu humor acima! ✨
             </p>
           </div>
         ) : (
@@ -320,6 +371,10 @@ export default function TermometroTab({ quemSouEu, settings }) {
             const emojiAutor = ehParceiro1 ? settings.emoji1 : settings.emoji2;
             const fotoAutor = ehParceiro1 ? settings.foto1 : settings.foto2;
             const corBadge = ehParceiro1 ? 'bg-yellow' : 'bg-pink';
+
+            const reacoes = item.respostas?.reacoes || {};
+            const minhaReacao = reacoes[quemSouEu];
+            const isMenuReacaoOpen = reacaoAbertaId === item.id;
 
             return (
               <div key={item.id} className="card-brut p-4 shadow-brutsm relative">
@@ -387,10 +442,69 @@ export default function TermometroTab({ quemSouEu, settings }) {
                 </div>
 
                 {item.respostas?.motivo && (
-                  <p className="text-xs font-semibold text-ink/80 mt-2 bg-ink/5 p-2.5 rounded-xl border border-ink/10 leading-relaxed break-words">
+                  <p className="text-xs font-semibold text-ink/80 my-2 bg-ink/5 p-2.5 rounded-xl border border-ink/10 leading-relaxed break-words">
                     "{item.respostas.motivo}"
                   </p>
                 )}
+
+                {/* Badges de Reações com Fotos */}
+                <div className="flex items-center gap-2 flex-wrap mt-2 pt-2 border-t-2 border-ink/10">
+                  {reacoes.parceiro1 && (
+                    <div className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full border border-ink bg-yellow/30 text-[10px] font-black shadow-brutsm">
+                      <Avatar
+                        foto={settings.foto1}
+                        emoji={settings.emoji1 || '🐰'}
+                        nome={settings.apelido1}
+                        size="xs"
+                        corFundo="bg-yellow"
+                      />
+                      <span>{settings.apelido1} {reacoes.parceiro1}</span>
+                    </div>
+                  )}
+
+                  {reacoes.parceiro2 && (
+                    <div className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full border border-ink bg-pink/30 text-[10px] font-black shadow-brutsm">
+                      <Avatar
+                        foto={settings.foto2}
+                        emoji={settings.emoji2 || '🦊'}
+                        nome={settings.apelido2}
+                        size="xs"
+                        corFundo="bg-pink"
+                      />
+                      <span>{settings.apelido2} {reacoes.parceiro2}</span>
+                    </div>
+                  )}
+
+                  {/* Botão de Reagir ao Humor */}
+                  <div className="relative ml-auto">
+                    <button
+                      onClick={() => setReacaoAbertaId(isMenuReacaoOpen ? null : item.id)}
+                      className={`flex items-center gap-1 px-2.5 py-1 rounded-full border border-ink text-[10px] font-black transition active:scale-95 shadow-brutsm ${
+                        minhaReacao ? 'bg-yellow text-ink' : 'bg-white text-ink hover:bg-yellow/20'
+                      }`}
+                    >
+                      <span>{minhaReacao || '❤️'}</span>
+                      <span>{minhaReacao ? 'Reagido' : 'Reagir'}</span>
+                    </button>
+
+                    {isMenuReacaoOpen && (
+                      <div className="absolute right-0 bottom-8 z-20 flex gap-1 p-1.5 bg-white border-2 border-ink rounded-full shadow-brut animate-popIn">
+                        {EMOJIS_REACAO.map((em) => (
+                          <button
+                            key={em}
+                            type="button"
+                            onClick={() => handleReagirMomento(item, em)}
+                            className={`w-7 h-7 rounded-full flex items-center justify-center text-sm hover:scale-125 transition ${
+                              minhaReacao === em ? 'bg-yellow border-2 border-ink' : 'hover:bg-ink/5'
+                            }`}
+                          >
+                            {em}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
               </div>
             );
           })
