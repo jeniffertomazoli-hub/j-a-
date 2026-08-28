@@ -3,7 +3,7 @@ import Modal from './Modal';
 import { saveCoupleSettings } from '../lib/storage';
 import { useToast } from '../context/ToastContext';
 import { compressImage } from '../lib/imageUtils';
-import { uploadImagemMemoria } from '../lib/supabase';
+import { uploadImagemMemoria, salvarConfiguracoesCasalNuvem } from '../lib/supabase';
 import {
   isNotificationSupported,
   getNotificationPermission,
@@ -17,6 +17,7 @@ export default function CoupleSettingsModal({ isOpen, onClose, settings, onSetti
   const toast = useToast();
   const [notifPermission, setNotifPermission] = useState(getNotificationPermission());
   const [salvandoFoto, setSalvandoFoto] = useState(false);
+  const [salvandoTudo, setSalvandoTudo] = useState(false);
 
   const fileInputRef1 = useRef(null);
   const fileInputRef2 = useRef(null);
@@ -61,16 +62,20 @@ export default function CoupleSettingsModal({ isOpen, onClose, settings, onSetti
       toast.show('Comprimindo foto de perfil...');
       const compressed = await compressImage(file, 800, 0.85);
 
-      toast.show('Enviando foto...');
+      toast.show('Enviando foto para a nuvem...');
       const fotoUrl = await uploadImagemMemoria(compressed);
 
-      if (parceiro === 'p1') {
-        setFormData((prev) => ({ ...prev, foto1: fotoUrl }));
-      } else {
-        setFormData((prev) => ({ ...prev, foto2: fotoUrl }));
-      }
+      const novoState = {
+        ...formData,
+        [parceiro === 'p1' ? 'foto1' : 'foto2']: fotoUrl,
+      };
 
-      toast.love('Foto de perfil carregada! Lembre-se de salvar as mudanças 📸');
+      setFormData(novoState);
+      saveCoupleSettings(novoState);
+      await salvarConfiguracoesCasalNuvem(novoState);
+      onSettingsUpdated(novoState);
+
+      toast.love('Foto salva na nuvem com sucesso! 📸💜');
     } catch (err) {
       console.error(err);
       toast.error('Erro ao enviar foto. Tente novamente!');
@@ -106,7 +111,7 @@ export default function CoupleSettingsModal({ isOpen, onClose, settings, onSetti
     }
   }
 
-  function handleSave(e) {
+  async function handleSave(e) {
     e.preventDefault();
     if (!formData.apelido1.trim() || !formData.apelido2.trim()) {
       toast.error('Preencha os apelidos de ambos!');
@@ -117,10 +122,19 @@ export default function CoupleSettingsModal({ isOpen, onClose, settings, onSetti
       return;
     }
 
-    const updated = saveCoupleSettings(formData);
-    onSettingsUpdated(updated);
-    toast.love('Configurações do casal salvas com sucesso! 💜');
-    onClose();
+    setSalvandoTudo(true);
+    try {
+      const updated = saveCoupleSettings(formData);
+      await salvarConfiguracoesCasalNuvem(updated);
+      onSettingsUpdated(updated);
+      toast.love('Configurações e fotos salvas na nuvem com sucesso! 💜');
+      onClose();
+    } catch (err) {
+      console.error('Erro ao salvar:', err);
+      toast.error('Erro ao salvar em nuvem.');
+    } finally {
+      setSalvandoTudo(false);
+    }
   }
 
   return (
@@ -158,7 +172,7 @@ export default function CoupleSettingsModal({ isOpen, onClose, settings, onSetti
               <button
                 type="button"
                 onClick={() => fileInputRef1.current?.click()}
-                disabled={salvandoFoto}
+                disabled={salvandoFoto || salvandoTudo}
                 className="btn-brut flex-1 py-1.5 px-2 bg-white text-ink text-[10px] font-black shadow-brutsm flex items-center justify-center gap-1"
               >
                 <span>📷</span>
@@ -232,7 +246,7 @@ export default function CoupleSettingsModal({ isOpen, onClose, settings, onSetti
               <button
                 type="button"
                 onClick={() => fileInputRef2.current?.click()}
-                disabled={salvandoFoto}
+                disabled={salvandoFoto || salvandoTudo}
                 className="btn-brut flex-1 py-1.5 px-2 bg-white text-ink text-[10px] font-black shadow-brutsm flex items-center justify-center gap-1"
               >
                 <span>📷</span>
@@ -336,10 +350,10 @@ export default function CoupleSettingsModal({ isOpen, onClose, settings, onSetti
           </button>
           <button
             type="submit"
-            disabled={salvandoFoto}
+            disabled={salvandoFoto || salvandoTudo}
             className="btn-brut flex-1 py-2.5 bg-yellow text-ink text-xs font-black shadow-brut disabled:opacity-50"
           >
-            {salvandoFoto ? 'Enviando foto...' : 'Salvar Mudanças 💜'}
+            {salvandoTudo ? 'Gravando em nuvem...' : salvandoFoto ? 'Enviando foto...' : 'Salvar Mudanças 💜'}
           </button>
         </div>
       </form>

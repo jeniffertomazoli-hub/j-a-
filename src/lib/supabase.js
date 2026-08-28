@@ -12,29 +12,58 @@ export function getTodayDateString() {
 }
 
 // -------------------------------------------------------------
-// ⚙️ CONFIGURAÇÕES DO CASAL SINCRONIZADAS EM NUVEM
+// ⚙️ CONFIGURAÇÕES DO CASAL & FOTOS DE PERFIL (PERSISTÊNCIA TOTAL EM NUVEM)
 // -------------------------------------------------------------
 export async function salvarConfiguracoesCasalNuvem(settings) {
+  const payload = {
+    apelido1: settings.apelido1 || 'Jeniffer',
+    emoji1: settings.emoji1 || '🐰',
+    foto1: settings.foto1 || '',
+    apelido2: settings.apelido2 || 'Alvaro',
+    emoji2: settings.emoji2 || '🦊',
+    foto2: settings.foto2 || '',
+    dataInicio: settings.dataInicio || '',
+    pinCode: settings.pinCode || '1234',
+  };
+
+  // 1. Tenta salvar na tabela configuracoes_casal
   try {
-    const { error } = await supabase.from('configuracoes_casal').upsert({
+    await supabase.from('configuracoes_casal').upsert({
       id: 'casal_principal',
-      apelido1: settings.apelido1 || 'Jeniffer',
-      emoji1: settings.emoji1 || '🐰',
-      foto1: settings.foto1 || '',
-      apelido2: settings.apelido2 || 'Alvaro',
-      emoji2: settings.emoji2 || '🦊',
-      foto2: settings.foto2 || '',
-      data_inicio: settings.dataInicio || '',
-      pin_code: settings.pinCode || '1234',
+      apelido1: payload.apelido1,
+      emoji1: payload.emoji1,
+      foto1: payload.foto1,
+      apelido2: payload.apelido2,
+      emoji2: payload.emoji2,
+      foto2: payload.foto2,
+      data_inicio: payload.dataInicio,
+      pin_code: payload.pinCode,
       atualizado_em: new Date().toISOString(),
     });
-    if (error) console.warn('Aviso: configuracoes_casal no supabase:', error.message);
+  } catch (e) {
+    console.warn('configuracoes_casal upsert:', e);
+  }
+
+  // 2. Salva SEMPRE também na tabela memorias como backup infalível
+  try {
+    const jsonDesc = JSON.stringify(payload);
+    // Remove registros antigos de config
+    await supabase.from('memorias').delete().eq('titulo', '__CONFIG_PERFIL__');
+    // Insere o registro de configuração atualizado
+    await supabase.from('memorias').insert({
+      data: getTodayDateString(),
+      titulo: '__CONFIG_PERFIL__',
+      descricao: jsonDesc,
+      foto_url: payload.foto1 || null,
+      link: payload.foto2 || null,
+    });
   } catch (err) {
-    console.warn('Erro ao salvar settings em nuvem:', err);
+    console.error('Erro no backup de config em memorias:', err);
   }
 }
 
 export async function buscarConfiguracoesCasalNuvem() {
+  // 1. Tenta buscar da tabela configuracoes_casal
   try {
     const { data, error } = await supabase
       .from('configuracoes_casal')
@@ -42,20 +71,47 @@ export async function buscarConfiguracoesCasalNuvem() {
       .eq('id', 'casal_principal')
       .single();
 
-    if (error || !data) return null;
-    return {
-      apelido1: data.apelido1 || 'Jeniffer',
-      emoji1: data.emoji1 || '🐰',
-      foto1: data.foto1 || '',
-      apelido2: data.apelido2 || 'Alvaro',
-      emoji2: data.emoji2 || '🦊',
-      foto2: data.foto2 || '',
-      dataInicio: data.data_inicio || '',
-      pinCode: data.pin_code || '1234',
-    };
-  } catch {
-    return null;
+    if (!error && data && (data.foto1 || data.foto2 || data.apelido1)) {
+      return {
+        apelido1: data.apelido1 || 'Jeniffer',
+        emoji1: data.emoji1 || '🐰',
+        foto1: data.foto1 || '',
+        apelido2: data.apelido2 || 'Alvaro',
+        emoji2: data.emoji2 || '🦊',
+        foto2: data.foto2 || '',
+        dataInicio: data.data_inicio || '',
+        pinCode: data.pin_code || '1234',
+      };
+    }
+  } catch {}
+
+  // 2. Fallback garantido na tabela memorias
+  try {
+    const { data: memData, error: memError } = await supabase
+      .from('memorias')
+      .select('*')
+      .eq('titulo', '__CONFIG_PERFIL__')
+      .order('criado_em', { ascending: false })
+      .limit(1);
+
+    if (!memError && memData && memData.length > 0) {
+      const parsed = JSON.parse(memData[0].descricao);
+      return {
+        apelido1: parsed.apelido1 || 'Jeniffer',
+        emoji1: parsed.emoji1 || '🐰',
+        foto1: parsed.foto1 || memData[0].foto_url || '',
+        apelido2: parsed.apelido2 || 'Alvaro',
+        emoji2: parsed.emoji2 || '🦊',
+        foto2: parsed.foto2 || memData[0].link || '',
+        dataInicio: parsed.dataInicio || '',
+        pinCode: parsed.pinCode || '1234',
+      };
+    }
+  } catch (err) {
+    console.error('Erro ao buscar backup de config:', err);
   }
+
+  return null;
 }
 
 // -------------------------------------------------------------
@@ -481,6 +537,7 @@ export async function buscarMemorias() {
   const { data, error } = await supabase
     .from('memorias')
     .select('*')
+    .neq('titulo', '__CONFIG_PERFIL__') // Ignora o registro interno de configurações
     .order('data', { ascending: false });
   if (error) throw error;
   return data || [];
