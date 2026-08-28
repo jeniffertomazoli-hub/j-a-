@@ -35,23 +35,30 @@ export function AppContent() {
   const [settings, setSettings] = useState(getCoupleSettings());
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
 
-  // Sincroniza configurações e fotos de perfil em nuvem (Supabase)
+  // Sincroniza configurações e fotos de perfil em tempo real via nuvem (Supabase)
   useEffect(() => {
     async function carregarSettingsNuvem() {
       const nuvem = await buscarConfiguracoesCasalNuvem();
       if (nuvem) {
-        const local = getCoupleSettings();
-        const merged = { ...local, ...nuvem };
-        saveCoupleSettings(merged);
-        setSettings(merged);
+        saveCoupleSettings(nuvem);
+        setSettings(nuvem);
       }
     }
     carregarSettingsNuvem();
 
-    const unsub = subscribeToTable('configuracoes_casal', () => {
+    const unsub1 = subscribeToTable('configuracoes_casal', () => {
       carregarSettingsNuvem();
     });
-    return () => unsub();
+    const unsub2 = subscribeToTable('memorias', (payload) => {
+      if (payload?.new?.titulo === '__CONFIG_PERFIL__' || payload?.eventType === 'INSERT') {
+        carregarSettingsNuvem();
+      }
+    });
+
+    return () => {
+      unsub1();
+      unsub2();
+    };
   }, []);
 
   // Monitora e dispara notificações em tempo real para ações do parceiro
