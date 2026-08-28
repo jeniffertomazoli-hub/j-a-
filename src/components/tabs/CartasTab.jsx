@@ -10,6 +10,7 @@ import { compressImage } from '../../lib/imageUtils';
 import { useToast } from '../../context/ToastContext';
 import Modal from '../Modal';
 import CartaAbertaModal from '../CartaAbertaModal';
+import Avatar from '../Avatar';
 
 function formatDataCurta(iso) {
   if (!iso) return '';
@@ -35,8 +36,10 @@ const TITULOS_SUGERIDOS = [
 
 export default function CartasTab({ quemSouEu, settings }) {
   const toast = useToast();
-  const meuNome = quemSouEu === 'parceiro1' ? settings.apelido1 : settings.apelido2;
-  const meuEmoji = quemSouEu === 'parceiro1' ? settings.emoji1 : settings.emoji2;
+  const ehP1 = quemSouEu === 'parceiro1';
+  const meuNome = ehP1 ? settings.apelido1 : settings.apelido2;
+  const meuEmoji = ehP1 ? settings.emoji1 : settings.emoji2;
+  const meuFoto = ehP1 ? settings.foto1 : settings.foto2;
 
   const [loading, setLoading] = useState(true);
   const [cartas, setCartas] = useState([]);
@@ -52,8 +55,8 @@ export default function CartasTab({ quemSouEu, settings }) {
   const [showSugestoes, setShowSugestoes] = useState(false);
 
   // Modais
-  const [cartaParaAbrir, setCartaParaAbrir] = useState(null); // carta aberta
-  const [cartaRevelada, setCartaRevelada] = useState(null); // dados após abertura
+  const [cartaParaAbrir, setCartaParaAbrir] = useState(null);
+  const [cartaRevelada, setCartaRevelada] = useState(null);
   const [deleteModal, setDeleteModal] = useState({ isOpen: false, id: null });
   const [confirmarAberturaModal, setConfirmarAberturaModal] = useState({ isOpen: false, carta: null });
 
@@ -108,7 +111,6 @@ export default function CartasTab({ quemSouEu, settings }) {
         foto_url: fotoUrl,
       });
 
-      // Reset
       setTitulo('');
       setMensagem('');
       setArquivoFoto(null);
@@ -194,9 +196,18 @@ export default function CartasTab({ quemSouEu, settings }) {
       {/* Formulário */}
       {showForm && (
         <div className="card-brut p-4 mb-6 space-y-3 shadow-brut animate-popIn">
-          <p className="badge-brut bg-yellow text-ink text-[10px]">
-            {meuEmoji} Escrita por {meuNome}
-          </p>
+          <div className="flex items-center gap-2">
+            <Avatar
+              foto={meuFoto}
+              emoji={meuEmoji}
+              nome={meuNome}
+              size="sm"
+              corFundo={ehP1 ? 'bg-yellow' : 'bg-pink'}
+            />
+            <p className="badge-brut bg-yellow text-ink text-[10px]">
+              Escrita por {meuNome}
+            </p>
+          </div>
 
           {/* Campo de Título com Sugestões */}
           <div className="relative">
@@ -270,12 +281,12 @@ export default function CartasTab({ quemSouEu, settings }) {
             disabled={salvando}
             className="btn-brut w-full py-3 bg-pink text-ink text-xs font-black disabled:opacity-50 shadow-brut"
           >
-            {salvando ? statusUpload || 'Lacando com amor...' : '💌 Lacrar e Enviar a Carta'}
+            {salvando ? statusUpload || 'Lacrando com amor...' : '💌 Lacrar e Enviar a Carta'}
           </button>
         </div>
       )}
 
-      {/* Cartas Fechadas (Para Abrir) */}
+      {/* Cartas Fechadas */}
       {cartasFechadas.length > 0 && (
         <div className="mb-6">
           <h2 className="font-display font-extrabold text-white text-base mb-3 flex items-center gap-2">
@@ -285,8 +296,10 @@ export default function CartasTab({ quemSouEu, settings }) {
           <div className="space-y-3">
             {cartasFechadas.map((carta) => {
               const escritaPorMim = carta.escrita_por === quemSouEu;
-              const nomeEscritor = carta.escrita_por === 'parceiro1' ? settings.apelido1 : settings.apelido2;
-              const emojiEscritor = carta.escrita_por === 'parceiro1' ? settings.emoji1 : settings.emoji2;
+              const ehEscritorP1 = carta.escrita_por === 'parceiro1';
+              const nomeEscritor = ehEscritorP1 ? settings.apelido1 : settings.apelido2;
+              const emojiEscritor = ehEscritorP1 ? settings.emoji1 : settings.emoji2;
+              const fotoEscritor = ehEscritorP1 ? settings.foto1 : settings.foto2;
 
               return (
                 <div
@@ -295,13 +308,18 @@ export default function CartasTab({ quemSouEu, settings }) {
                     escritaPorMim ? 'bg-white/90' : 'bg-yellow/20'
                   }`}
                 >
-                  {/* Efeito de Envelope Fechado */}
                   <div className="flex items-start justify-between gap-3">
                     <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-1.5 mb-1">
-                        <span className="text-base">{escritaPorMim ? '📤' : '📨'}</span>
+                      <div className="flex items-center gap-2 mb-1.5">
+                        <Avatar
+                          foto={fotoEscritor}
+                          emoji={emojiEscritor}
+                          nome={nomeEscritor}
+                          size="xs"
+                          corFundo={ehEscritorP1 ? 'bg-yellow' : 'bg-pink'}
+                        />
                         <span className={`badge-brut text-[9px] ${escritaPorMim ? 'bg-purple text-ink' : 'bg-pink text-ink'}`}>
-                          {escritaPorMim ? 'Você escreveu' : `De ${emojiEscritor} ${nomeEscritor}`}
+                          {escritaPorMim ? 'Você escreveu' : `De ${nomeEscritor}`}
                         </span>
                       </div>
 
@@ -343,7 +361,7 @@ export default function CartasTab({ quemSouEu, settings }) {
         </div>
       )}
 
-      {/* Cartas Abertas (Histórico) */}
+      {/* Cartas Abertas */}
       {cartasAbertas.length > 0 && (
         <div>
           <h2 className="font-display font-extrabold text-white text-base mb-3 flex items-center gap-2">
@@ -352,8 +370,13 @@ export default function CartasTab({ quemSouEu, settings }) {
 
           <div className="space-y-3">
             {cartasAbertas.map((carta) => {
-              const nomeEscritor = carta.escrita_por === 'parceiro1' ? settings.apelido1 : settings.apelido2;
-              const nomeLeitor = carta.aberta_por === 'parceiro1' ? settings.apelido1 : settings.apelido2;
+              const ehEscritorP1 = carta.escrita_por === 'parceiro1';
+              const nomeEscritor = ehEscritorP1 ? settings.apelido1 : settings.apelido2;
+              const emojiEscritor = ehEscritorP1 ? settings.emoji1 : settings.emoji2;
+              const fotoEscritor = ehEscritorP1 ? settings.foto1 : settings.foto2;
+
+              const ehLeitorP1 = carta.aberta_por === 'parceiro1';
+              const nomeLeitor = ehLeitorP1 ? settings.apelido1 : settings.apelido2;
 
               return (
                 <div
@@ -362,9 +385,18 @@ export default function CartasTab({ quemSouEu, settings }) {
                 >
                   <div className="flex items-start justify-between gap-2">
                     <div className="flex-1 min-w-0">
-                      <span className="badge-brut bg-cyan text-ink text-[9px] mb-1.5 block w-fit">
-                        ✉️ Aberta!
-                      </span>
+                      <div className="flex items-center gap-1.5 mb-1">
+                        <Avatar
+                          foto={fotoEscritor}
+                          emoji={emojiEscritor}
+                          nome={nomeEscritor}
+                          size="xs"
+                          corFundo={ehEscritorP1 ? 'bg-yellow' : 'bg-pink'}
+                        />
+                        <span className="badge-brut bg-cyan text-ink text-[9px]">
+                          ✉️ Aberta!
+                        </span>
+                      </div>
                       <p className="font-display font-bold text-ink text-sm leading-snug">
                         {carta.titulo}
                       </p>
@@ -426,6 +458,7 @@ export default function CartasTab({ quemSouEu, settings }) {
       {/* Modal de Revelação da Carta */}
       <CartaAbertaModal
         carta={cartaRevelada}
+        settings={settings}
         nomeQuemAbriu={cartaRevelada?.aberta_por === 'parceiro1' ? settings.apelido1 : settings.apelido2}
         onClose={() => setCartaRevelada(null)}
       />

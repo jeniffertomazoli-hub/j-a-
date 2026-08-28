@@ -1,7 +1,8 @@
 import React, { useEffect } from 'react';
 import confetti from 'canvas-confetti';
+import Avatar from './Avatar';
 
-export default function CartaAbertaModal({ carta, nomeQuemAbriu, onClose }) {
+export default function CartaAbertaModal({ carta, settings, nomeQuemAbriu, onClose }) {
   useEffect(() => {
     if (!carta) return;
 
@@ -29,6 +30,11 @@ export default function CartaAbertaModal({ carta, nomeQuemAbriu, onClose }) {
 
   if (!carta) return null;
 
+  const ehP1 = carta.escrita_por === 'parceiro1';
+  const nomeEscritor = ehP1 ? settings?.apelido1 || 'Jeniffer' : settings?.apelido2 || 'Alvaro';
+  const emojiEscritor = ehP1 ? settings?.emoji1 || '🐰' : settings?.emoji2 || '🦊';
+  const fotoEscritor = ehP1 ? settings?.foto1 : settings?.foto2;
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-ink/70 backdrop-blur-sm animate-fadeIn">
       <div className="w-full max-w-sm animate-popIn">
@@ -51,10 +57,19 @@ export default function CartaAbertaModal({ carta, nomeQuemAbriu, onClose }) {
               <p className="badge-brut bg-pink text-ink text-[10px] mb-2">
                 "{carta.titulo}"
               </p>
-              <p className="text-[10px] text-ink/50 font-bold">
-                Escrita com amor por{' '}
-                <span className="text-ink/80 font-black">{carta.escrita_por === 'parceiro1' ? 'Jeniffer 🐰' : 'Alvaro 🦊'}</span>
-              </p>
+              <div className="flex items-center gap-1.5 mt-1">
+                <Avatar
+                  foto={fotoEscritor}
+                  emoji={emojiEscritor}
+                  nome={nomeEscritor}
+                  size="xs"
+                  corFundo={ehP1 ? 'bg-yellow' : 'bg-pink'}
+                />
+                <p className="text-[10px] text-ink/70 font-bold">
+                  Escrita com amor por{' '}
+                  <span className="text-ink/90 font-black">{nomeEscritor}</span>
+                </p>
+              </div>
             </div>
 
             {/* Foto (se existir) */}

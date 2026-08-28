@@ -84,7 +84,7 @@ export async function buscarCapsulaMemorias() {
 }
 
 // -------------------------------------------------------------
-// 📸 FEED DO CASAL (ESTILO INSTAGRAM ÍNTIMO)
+// 📸 FEED DO CASAL (POSTS, REAÇÕES COM EMOJI E COMENTÁRIOS)
 // -------------------------------------------------------------
 export async function criarPostFeed({ parceiro, autor_nome, texto, foto_url }) {
   const { data, error } = await supabase.from('feed_posts').insert({
@@ -93,6 +93,7 @@ export async function criarPostFeed({ parceiro, autor_nome, texto, foto_url }) {
     texto: texto || '',
     foto_url: foto_url || null,
     curtidas: [],
+    reacoes: {},
     comentarios: [],
   }).select();
 
@@ -116,11 +117,39 @@ export async function buscarPostsFeed(limit = 50) {
   return data || [];
 }
 
+export async function reagirPostFeed(postId, parceiro, emoji, reacoesAtuais = {}) {
+  const objReacoes = typeof reacoesAtuais === 'object' && reacoesAtuais !== null && !Array.isArray(reacoesAtuais)
+    ? { ...reacoesAtuais }
+    : {};
+
+  // Se já tinha esse emoji, remove (toggle); se era outro ou não tinha, define
+  if (objReacoes[parceiro] === emoji) {
+    delete objReacoes[parceiro];
+  } else {
+    objReacoes[parceiro] = emoji;
+  }
+
+  // Sincroniza também com a lista de curtidas
+  const curtidasArray = Object.keys(objReacoes);
+
+  const { error } = await supabase
+    .from('feed_posts')
+    .update({ reacoes: objReacoes, curtidas: curtidasArray })
+    .eq('id', postId);
+
+  if (error) {
+    // Se a coluna reacoes não existir ainda, atualiza apenas curtidas
+    await alternarCurtidaPost(postId, parceiro);
+  }
+
+  return objReacoes;
+}
+
 export async function alternarCurtidaPost(postId, parceiro, curtidasAtuais = []) {
-  const jaCurtiu = curtidasAtuais.includes(parceiro);
+  const jaCurtiu = Array.isArray(curtidasAtuais) && curtidasAtuais.includes(parceiro);
   const novasCurtidas = jaCurtiu
     ? curtidasAtuais.filter((p) => p !== parceiro)
-    : [...curtidasAtuais, parceiro];
+    : [...(Array.isArray(curtidasAtuais) ? curtidasAtuais : []), parceiro];
 
   const { error } = await supabase
     .from('feed_posts')
@@ -138,7 +167,7 @@ export async function adicionarComentarioPost(postId, { parceiro, autor_nome, te
     texto,
     criado_em: new Date().toISOString(),
   };
-  const novosComentarios = [...comentariosAtuais, novoComentario];
+  const novosComentarios = [...(Array.isArray(comentariosAtuais) ? comentariosAtuais : []), novoComentario];
 
   const { error } = await supabase
     .from('feed_posts')

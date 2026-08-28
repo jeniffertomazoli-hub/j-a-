@@ -12,6 +12,7 @@ import {
 } from '../../lib/supabase';
 import { useToast } from '../../context/ToastContext';
 import Modal from '../Modal';
+import Avatar from '../Avatar';
 
 function formatDataHora(iso) {
   if (!iso) return '';
@@ -22,8 +23,14 @@ function formatDataHora(iso) {
 export default function QuizTab({ quemSouEu, settings }) {
   const toast = useToast();
   const outroParceiro = quemSouEu === 'parceiro1' ? 'parceiro2' : 'parceiro1';
-  const meuNome = quemSouEu === 'parceiro1' ? settings.apelido1 : settings.apelido2;
-  const outroNome = quemSouEu === 'parceiro1' ? settings.apelido2 : settings.apelido1;
+  const ehP1 = quemSouEu === 'parceiro1';
+  const meuNome = ehP1 ? settings.apelido1 : settings.apelido2;
+  const meuEmoji = ehP1 ? settings.emoji1 : settings.emoji2;
+  const meuFoto = ehP1 ? settings.foto1 : settings.foto2;
+
+  const outroNome = ehP1 ? settings.apelido2 : settings.apelido1;
+  const outroEmoji = ehP1 ? settings.emoji2 : settings.emoji1;
+  const outroFoto = ehP1 ? settings.foto2 : settings.foto1;
 
   const [loading, setLoading] = useState(true);
   const [perguntas, setPerguntas] = useState([]);
@@ -104,20 +111,21 @@ export default function QuizTab({ quemSouEu, settings }) {
         </div>
       ) : (
         <div className="space-y-4">
-          {perguntas.map((pergunta) => (
-            <PerguntaCard
-              key={pergunta.id}
-              pergunta={pergunta}
+          {perguntas.map((p, index) => (
+            <QuizCard
+              key={p.id}
+              numero={index + 1}
+              pergunta={p}
+              respostas={respostas.filter((r) => r.pergunta_id === p.id)}
               quemSouEu={quemSouEu}
               meuNome={meuNome}
+              meuEmoji={meuEmoji}
+              meuFoto={meuFoto}
+              outroParceiro={outroParceiro}
               outroNome={outroNome}
-              respostaMinha={respostas.find(
-                (r) => r.pergunta_id === pergunta.id && r.parceiro === quemSouEu
-              )}
-              respostaOutro={respostas.find(
-                (r) => r.pergunta_id === pergunta.id && r.parceiro === outroParceiro
-              )}
-              onAtualizar={carregar}
+              outroEmoji={outroEmoji}
+              outroFoto={outroFoto}
+              onRespostaSalva={carregar}
             />
           ))}
         </div>
@@ -126,76 +134,104 @@ export default function QuizTab({ quemSouEu, settings }) {
   );
 }
 
-function PerguntaCard({
+function QuizCard({
+  numero,
   pergunta,
+  respostas,
   quemSouEu,
   meuNome,
+  meuEmoji,
+  meuFoto,
+  outroParceiro,
   outroNome,
-  respostaMinha,
-  respostaOutro,
-  onAtualizar,
+  outroEmoji,
+  outroFoto,
+  onRespostaSalva,
 }) {
   const toast = useToast();
-  const [editando, setEditando] = useState(false);
   const [salvando, setSalvando] = useState(false);
+  const [editando, setEditando] = useState(false);
+
+  const respostaMinha = respostas.find((r) => r.parceiro === quemSouEu);
+  const respostaOutro = respostas.find((r) => r.parceiro === outroParceiro);
+
+  const ambosResponderam = Boolean(respostaMinha && respostaOutro);
+  const deuMatch = ambosResponderam && respostaMinha.resposta === respostaOutro.resposta;
 
   async function handleResponder(opcao) {
     setSalvando(true);
     try {
-      await salvarRespostaQuiz(
-        pergunta.id,
-        quemSouEu,
-        opcao,
-        Boolean(respostaMinha)
-      );
-      setEditando(false);
-      onAtualizar();
+      const isEdicao = Boolean(respostaMinha);
+      await salvarRespostaQuiz(pergunta.id, quemSouEu, opcao, isEdicao);
 
       if (respostaOutro && respostaOutro.resposta === opcao) {
         confetti({
-          particleCount: 70,
-          spread: 60,
+          particleCount: 80,
+          spread: 70,
           origin: { y: 0.6 },
-          colors: ['#33DDF3', '#FF4D97', '#FFD93D'],
+          colors: ['#FFD93D', '#FF4D97', '#8B7FFF'],
         });
-        toast.love('Vocês deram MATCH nessa pergunta! 💙✨');
+        toast.love('DEU MATCH! Vocês pensaram exatamente igual! 💙');
       } else {
-        toast.success('Resposta salva com sucesso!');
+        toast.success('Resposta salva!');
       }
+
+      setEditando(false);
+      onRespostaSalva();
     } catch (err) {
       console.error(err);
-      toast.error('Não consegui salvar sua resposta.');
+      toast.error('Erro ao salvar resposta.');
     } finally {
       setSalvando(false);
     }
   }
 
-  const ambosResponderam = Boolean(respostaMinha && respostaOutro);
-  const deuMatch = ambosResponderam && respostaMinha.resposta === respostaOutro.resposta;
-
   return (
-    <div className="card-brut p-4 shadow-brut">
-      <p className="font-display text-base font-bold text-ink mb-3 leading-snug">
-        {pergunta.texto}
-      </p>
+    <div className="card-brut p-4 sm:p-5 relative shadow-brut">
+      <div className="flex items-center justify-between gap-2 mb-2">
+        <span className="badge-brut bg-yellow text-ink text-[10px]">
+          Pergunta #{numero}
+        </span>
+        {ambosResponderam && (
+          <span
+            className={`badge-brut text-[10px] ${
+              deuMatch ? 'bg-cyan text-ink' : 'bg-pink text-white'
+            }`}
+          >
+            {deuMatch ? '🎉 DEU MATCH!' : '💭 Respostas Diferentes'}
+          </span>
+        )}
+      </div>
 
-      {/* Se ainda não respondi ou estou editando minha resposta */}
+      <h3 className="font-display font-extrabold text-sm sm:text-base text-ink mb-4 leading-snug">
+        {pergunta.texto}
+      </h3>
+
+      {/* Opções para Responder */}
       {!respostaMinha || editando ? (
-        <div className="flex flex-col gap-2">
-          {pergunta.opcoes.map((opcao) => (
-            <button
-              key={opcao}
-              onClick={() => handleResponder(opcao)}
-              disabled={salvando}
-              className="py-2.5 px-3 rounded-xl border-3 border-ink text-ink text-xs font-extrabold text-left bg-white hover:bg-yellow active:scale-98 transition shadow-brutsm disabled:opacity-50"
-            >
-              {opcao}
-            </button>
-          ))}
+        <div className="space-y-2 mb-3">
+          {pergunta.opcoes.map((opcao) => {
+            const selecionada = respostaMinha?.resposta === opcao;
+            return (
+              <button
+                key={opcao}
+                disabled={salvando}
+                onClick={() => handleResponder(opcao)}
+                className={`w-full py-2.5 px-3 rounded-xl border-3 border-ink font-extrabold text-xs text-left transition-all shadow-brutsm active:scale-98 ${
+                  selecionada
+                    ? 'bg-yellow text-ink'
+                    : 'bg-white text-ink hover:bg-yellow/20'
+                }`}
+              >
+                {opcao}
+              </button>
+            );
+          })}
+
           {editando && (
             <button
               onClick={() => setEditando(false)}
-              className="text-xs font-black text-ink/50 self-start mt-1 hover:underline"
+              className="text-[10px] font-black text-ink/50 underline block mt-1"
             >
               Cancelar edição
             </button>
@@ -205,9 +241,18 @@ function PerguntaCard({
         /* Minha Resposta Registrada */
         <div className="bg-purple/15 rounded-xl p-3 mb-2 border-2 border-ink/20">
           <div className="flex items-center justify-between">
-            <p className="text-[10px] font-black text-ink/60 uppercase">
-              {meuNome} (Você)
-            </p>
+            <div className="flex items-center gap-1.5">
+              <Avatar
+                foto={meuFoto}
+                emoji={meuEmoji}
+                nome={meuNome}
+                size="xs"
+                corFundo="bg-purple"
+              />
+              <p className="text-[10px] font-black text-ink/60 uppercase">
+                {meuNome} (Você)
+              </p>
+            </div>
             <button
               onClick={() => setEditando(true)}
               className="text-[10px] font-black text-royal underline"
@@ -227,9 +272,18 @@ function PerguntaCard({
 
       {/* Resposta do Outro Parceiro */}
       <div className="bg-cyan/15 rounded-xl p-3 mt-2 border-2 border-ink/20">
-        <p className="text-[10px] font-black text-ink/60 uppercase">
-          {outroNome}
-        </p>
+        <div className="flex items-center gap-1.5 mb-0.5">
+          <Avatar
+            foto={outroFoto}
+            emoji={outroEmoji}
+            nome={outroNome}
+            size="xs"
+            corFundo="bg-cyan"
+          />
+          <p className="text-[10px] font-black text-ink/60 uppercase">
+            {outroNome}
+          </p>
+        </div>
         {respostaOutro ? (
           <div>
             <p className="text-xs font-extrabold text-ink mt-1">
@@ -270,7 +324,6 @@ function GerenciarPerguntasView({ perguntas, onVoltar }) {
   const [textoEdit, setTextoEdit] = useState('');
   const [opcoesEdit, setOpcoesEdit] = useState('');
 
-  // Modal de confirmação
   const [deleteModal, setDeleteModal] = useState({
     isOpen: false,
     id: null,
@@ -300,12 +353,21 @@ function GerenciarPerguntasView({ perguntas, onVoltar }) {
     }
   }
 
-  async function handleSalvarEdit(id) {
+  async function recarregar() {
+    const data = await buscarPerguntasQuiz();
+    setLista(data);
+  }
+
+  function handleIniciarEdicao(item) {
+    setEditandoId(item.id);
+    setTextoEdit(item.texto);
+    setOpcoesEdit(item.opcoes.join(', '));
+  }
+
+  async function handleSalvarEdicao(id) {
+    if (!textoEdit.trim() || !opcoesEdit.trim()) return;
     const opcoesArr = opcoesEdit.split(',').map((s) => s.trim()).filter(Boolean);
-    if (!textoEdit.trim() || opcoesArr.length < 2) {
-      toast.error('Preencha o texto e pelo menos 2 opções.');
-      return;
-    }
+    if (opcoesArr.length < 2) return;
 
     try {
       await editarPerguntaQuiz(id, textoEdit.trim(), opcoesArr);
@@ -314,25 +376,20 @@ function GerenciarPerguntasView({ perguntas, onVoltar }) {
       recarregar();
     } catch (err) {
       console.error(err);
-      toast.error('Erro ao atualizar pergunta.');
+      toast.error('Erro ao salvar alteração.');
     }
   }
 
-  async function handleAbrirExclusao(item) {
+  async function handleAbrirDelete(id) {
     try {
-      const count = await contarRespostasPergunta(item.id);
-      setDeleteModal({
-        isOpen: true,
-        id: item.id,
-        totalRespostas: count,
-      });
+      const total = await contarRespostasPergunta(id);
+      setDeleteModal({ isOpen: true, id, totalRespostas: total });
     } catch {
-      setDeleteModal({ isOpen: true, id: item.id, totalRespostas: 0 });
+      setDeleteModal({ isOpen: true, id, totalRespostas: 0 });
     }
   }
 
   async function handleConfirmDelete() {
-    if (!deleteModal.id) return;
     try {
       await excluirPerguntaQuiz(deleteModal.id);
       toast.success('Pergunta excluída!');
@@ -344,34 +401,35 @@ function GerenciarPerguntasView({ perguntas, onVoltar }) {
     }
   }
 
-  async function recarregar() {
-    const data = await buscarPerguntasQuiz();
-    setLista(data);
-  }
-
   return (
     <div className="px-4 sm:px-6 pt-5 max-w-md mx-auto pb-12 animate-fadeIn">
-      <p className="badge-brut bg-pink text-ink mb-2">Gerenciador</p>
-      <h1 className="font-display text-2xl font-extrabold text-white mb-5">
-        Perguntas do Quiz
+      <button
+        onClick={onVoltar}
+        className="btn-brut py-1.5 px-3 bg-white text-ink text-xs font-black mb-4 shadow-brutsm flex items-center gap-1"
+      >
+        ← Voltar ao Quiz
+      </button>
+
+      <h1 className="font-display text-2xl font-extrabold text-white mb-4">
+        Gerenciar Perguntas
       </h1>
 
-      {/* Formulário de Nova Pergunta */}
-      <div className="card-brut p-4 mb-5 shadow-brut">
-        <p className="text-xs font-black uppercase text-ink/70 mb-2">
-          Nova pergunta
-        </p>
+      {/* Adicionar Pergunta */}
+      <div className="card-brut p-4 mb-6 shadow-brut">
+        <h2 className="font-display font-extrabold text-sm text-ink mb-2">
+          Nova Pergunta
+        </h2>
         <input
           value={novoTexto}
           onChange={(e) => setNovoTexto(e.target.value)}
-          placeholder="Ex: Qual o nosso rolê perfeito?"
-          className="w-full rounded-xl border-3 border-ink px-3 py-2 outline-none bg-white text-xs font-bold mb-2 shadow-brutsm placeholder:text-ink/40"
+          placeholder="Ex: Qual nosso plano perfeito para o fim de semana?"
+          className="w-full rounded-xl border-3 border-ink px-3 py-2 text-xs font-bold mb-2 bg-white outline-none"
         />
         <input
           value={novasOpcoes}
           onChange={(e) => setNovasOpcoes(e.target.value)}
-          placeholder="Opções separadas por vírgula (Ex: Praia, Cinema, Restaurante)"
-          className="w-full rounded-xl border-3 border-ink px-3 py-2 outline-none bg-white text-xs font-bold mb-3 shadow-brutsm placeholder:text-ink/40"
+          placeholder="Opções separadas por vírgula (ex: Praia, Cinema, Ficar na cama)"
+          className="w-full rounded-xl border-3 border-ink px-3 py-2 text-xs font-bold mb-3 bg-white outline-none"
         />
         <button
           onClick={handleAdd}
@@ -381,32 +439,32 @@ function GerenciarPerguntasView({ perguntas, onVoltar }) {
         </button>
       </div>
 
-      {/* Lista de Perguntas */}
+      {/* Lista Atual */}
       <div className="space-y-3">
-        {lista.map((p) => (
-          <div key={p.id} className="card-brut p-4 shadow-brutsm">
-            {editandoId === p.id ? (
+        {lista.map((item, index) => (
+          <div key={item.id} className="card-brut p-3.5 shadow-brutsm">
+            {editandoId === item.id ? (
               <div className="space-y-2">
                 <input
                   value={textoEdit}
                   onChange={(e) => setTextoEdit(e.target.value)}
-                  className="w-full rounded-xl border-3 border-ink px-3 py-1.5 outline-none bg-white text-xs font-bold"
+                  className="w-full rounded-lg border-2 border-ink px-2.5 py-1 text-xs font-bold bg-white outline-none"
                 />
                 <input
                   value={opcoesEdit}
                   onChange={(e) => setOpcoesEdit(e.target.value)}
-                  className="w-full rounded-xl border-3 border-ink px-3 py-1.5 outline-none bg-white text-xs font-bold"
+                  className="w-full rounded-lg border-2 border-ink px-2.5 py-1 text-xs font-bold bg-white outline-none"
                 />
-                <div className="flex gap-2 pt-1">
+                <div className="flex gap-2">
                   <button
-                    onClick={() => handleSalvarEdit(p.id)}
-                    className="btn-brut flex-1 py-1.5 bg-yellow text-ink text-xs font-black"
+                    onClick={() => handleSalvarEdicao(item.id)}
+                    className="btn-brut px-3 py-1 bg-yellow text-ink text-xs font-black"
                   >
                     Salvar
                   </button>
                   <button
                     onClick={() => setEditandoId(null)}
-                    className="btn-brut flex-1 py-1.5 bg-white text-ink text-xs font-black"
+                    className="btn-brut px-3 py-1 bg-white text-ink text-xs"
                   >
                     Cancelar
                   </button>
@@ -414,44 +472,34 @@ function GerenciarPerguntasView({ perguntas, onVoltar }) {
               </div>
             ) : (
               <div>
-                <p className="font-bold text-ink text-xs leading-snug">
-                  {p.texto}
-                </p>
-                <p className="text-[10px] text-ink/60 font-medium mt-1">
-                  {p.opcoes.join(' · ')}
-                </p>
-                <div className="flex gap-3 mt-2.5">
-                  <button
-                    onClick={() => {
-                      setEditandoId(p.id);
-                      setTextoEdit(p.texto);
-                      setOpcoesEdit(p.opcoes.join(', '));
-                    }}
-                    className="text-[10px] font-black text-royal underline"
-                  >
-                    Editar
-                  </button>
-                  <button
-                    onClick={() => handleAbrirExclusao(p)}
-                    className="text-[10px] font-black text-pink underline"
-                  >
-                    Excluir
-                  </button>
+                <div className="flex items-start justify-between gap-2 mb-1">
+                  <span className="font-display font-extrabold text-xs text-ink">
+                    #{index + 1} {item.texto}
+                  </span>
+                  <div className="flex gap-1 shrink-0">
+                    <button
+                      onClick={() => handleIniciarEdicao(item)}
+                      className="text-ink/40 hover:text-royal text-xs p-1"
+                    >
+                      ✏️
+                    </button>
+                    <button
+                      onClick={() => handleAbrirDelete(item.id)}
+                      className="text-ink/40 hover:text-pink text-xs p-1"
+                    >
+                      🗑️
+                    </button>
+                  </div>
                 </div>
+                <p className="text-[10px] text-ink/60 font-semibold">
+                  Opções: {item.opcoes.join(' • ')}
+                </p>
               </div>
             )}
           </div>
         ))}
       </div>
 
-      <button
-        onClick={onVoltar}
-        className="btn-brut mt-6 w-full py-3 bg-white text-ink text-xs font-black shadow-brut"
-      >
-        ← Voltar ao Quiz
-      </button>
-
-      {/* Modal de Exclusão */}
       <Modal
         isOpen={deleteModal.isOpen}
         onClose={() => setDeleteModal({ isOpen: false, id: null, totalRespostas: 0 })}
@@ -463,9 +511,9 @@ function GerenciarPerguntasView({ perguntas, onVoltar }) {
         isDestructive={true}
       >
         <p>
-          {deleteModal.totalRespostas > 0
-            ? `Esta pergunta já possui ${deleteModal.totalRespostas} resposta(s) registrada(s). Excluir também vai apagar as respostas. Deseja continuar?`
-            : 'Tem certeza que deseja excluir esta pergunta?'}
+          Tem certeza que deseja remover esta pergunta?{' '}
+          {deleteModal.totalRespostas > 0 &&
+            `Ela já possui ${deleteModal.totalRespostas} resposta(s) registrada(s).`}
         </p>
       </Modal>
     </div>

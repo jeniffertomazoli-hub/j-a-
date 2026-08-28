@@ -4,6 +4,7 @@ import {
   buscarCapsulaMemorias,
   buscarMemorias,
 } from '../../lib/supabase';
+import Avatar from '../Avatar';
 
 function formatDiaMes(iso) {
   if (!iso) return '';
@@ -118,15 +119,15 @@ export default function PainelTab({ quemSouEu, settings }) {
     {
       id: 'memorias',
       emoji: '📸',
-      titulo: 'Guardiões de Histórias',
+      titulo: 'Colecionadores',
       sub: '5+ memórias salvas',
       desbloqueada: totalMemorias >= 5,
     },
     {
-      id: 'cem',
+      id: 'centenario',
       emoji: '💯',
-      titulo: '100 Dias Juntos',
-      sub: 'Constância de casal',
+      titulo: 'Amor Centenário',
+      sub: '100+ dias juntos no app',
       desbloqueada: (stats?.totalDias || 0) >= 100,
     },
   ];
@@ -166,7 +167,23 @@ export default function PainelTab({ quemSouEu, settings }) {
             <p className="text-xs font-black text-ink/70 mt-2">
               Índice Médio de Sintonia
             </p>
-            <p className="text-2xl mt-2 select-none">💜 ✨ 😊</p>
+            <div className="flex items-center justify-center gap-2 mt-2">
+              <Avatar
+                foto={settings.foto1}
+                emoji={settings.emoji1 || '🐰'}
+                nome={settings.apelido1}
+                size="sm"
+                corFundo="bg-yellow"
+              />
+              <span className="text-base">💜</span>
+              <Avatar
+                foto={settings.foto2}
+                emoji={settings.emoji2 || '🦊'}
+                nome={settings.apelido2}
+                size="sm"
+                corFundo="bg-pink"
+              />
+            </div>
             <p className="text-xs text-ink/70 font-medium mt-2 leading-relaxed">
               {sintoniaScore >= 80
                 ? `${settings.apelido1} e ${settings.apelido2}, vocês estão com excelente harmonia nesta semana!`
@@ -210,12 +227,26 @@ export default function PainelTab({ quemSouEu, settings }) {
                       </div>
 
                       <div className="grid grid-cols-2 gap-1.5">
-                        <span className="badge-brut bg-yellow text-ink text-[10px] justify-center py-1 truncate text-center">
-                          {settings.emoji1} {settings.apelido1}: {item.parceiro1 ?? '—'}
-                        </span>
-                        <span className="badge-brut bg-pink text-ink text-[10px] justify-center py-1 truncate text-center">
-                          {settings.emoji2} {settings.apelido2}: {item.parceiro2 ?? '—'}
-                        </span>
+                        <div className="badge-brut bg-yellow text-ink text-[10px] flex items-center justify-center gap-1 py-1 truncate">
+                          <Avatar
+                            foto={settings.foto1}
+                            emoji={settings.emoji1 || '🐰'}
+                            nome={settings.apelido1}
+                            size="xs"
+                            corFundo="bg-yellow"
+                          />
+                          <span className="truncate">{settings.apelido1}: {item.parceiro1 ?? '—'}</span>
+                        </div>
+                        <div className="badge-brut bg-pink text-ink text-[10px] flex items-center justify-center gap-1 py-1 truncate">
+                          <Avatar
+                            foto={settings.foto2}
+                            emoji={settings.emoji2 || '🦊'}
+                            nome={settings.apelido2}
+                            size="xs"
+                            corFundo="bg-pink"
+                          />
+                          <span className="truncate">{settings.apelido2}: {item.parceiro2 ?? '—'}</span>
+                        </div>
                       </div>
                     </div>
                   );

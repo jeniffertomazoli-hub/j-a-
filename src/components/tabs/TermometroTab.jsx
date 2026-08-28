@@ -10,6 +10,7 @@ import {
 } from '../../lib/supabase';
 import { useToast } from '../../context/ToastContext';
 import Modal from '../Modal';
+import Avatar from '../Avatar';
 
 function getMoodEmoji(level) {
   if (level >= 90) return '🥰';
@@ -43,6 +44,7 @@ function getFraseSintonia(pct) {
 }
 
 function formatarDataHora(isoString) {
+  if (!isoString) return '';
   const d = new Date(isoString);
   const hoje = new Date();
   const horaFormatada = d.toLocaleTimeString('pt-BR', {
@@ -67,10 +69,14 @@ function temRespostaValida(item) {
 
 export default function TermometroTab({ quemSouEu, settings }) {
   const toast = useToast();
-  const meuNome = quemSouEu === 'parceiro1' ? settings.apelido1 : settings.apelido2;
-  const meuEmoji = quemSouEu === 'parceiro1' ? settings.emoji1 : settings.emoji2;
-  const outroNome = quemSouEu === 'parceiro1' ? settings.apelido2 : settings.apelido1;
-  const outroEmoji = quemSouEu === 'parceiro1' ? settings.emoji2 : settings.emoji1;
+  const ehP1 = quemSouEu === 'parceiro1';
+  const meuNome = ehP1 ? settings.apelido1 : settings.apelido2;
+  const meuEmoji = ehP1 ? settings.emoji1 : settings.emoji2;
+  const meuFoto = ehP1 ? settings.foto1 : settings.foto2;
+
+  const outroNome = ehP1 ? settings.apelido2 : settings.apelido1;
+  const outroEmoji = ehP1 ? settings.emoji2 : settings.emoji1;
+  const outroFoto = ehP1 ? settings.foto2 : settings.foto1;
 
   const [loading, setLoading] = useState(true);
   const [salvando, setSalvando] = useState(false);
@@ -91,7 +97,6 @@ export default function TermometroTab({ quemSouEu, settings }) {
     id: null,
   });
 
-  // Carrega e escuta em tempo real
   useEffect(() => {
     carregar();
     const unsubscribe = subscribeToTable('respostas_diarias', () => {
@@ -102,10 +107,22 @@ export default function TermometroTab({ quemSouEu, settings }) {
 
   async function carregar() {
     try {
-      const data = await buscarRespostasDiarias();
+      const data = await buscarRespostasDiarias(60);
       setRespostas(data);
+
+      const p1 = data.find((r) => r.parceiro === 'parceiro1' && temRespostaValida(r));
+      const p2 = data.find((r) => r.parceiro === 'parceiro2' && temRespostaValida(r));
+
+      if (p1 && p2) {
+        const pct = calcularCompatibilidade(p1.respostas.nivel, p2.respostas.nivel);
+        await salvarCapsulaSintonia(getTodayDateString(), {
+          porcentagem: pct,
+          humor_p1: p1.respostas.nivel,
+          humor_p2: p2.respostas.nivel,
+        });
+      }
     } catch (err) {
-      console.error('Erro ao buscar respostas:', err);
+      console.error('Erro ao carregar termômetro:', err);
     } finally {
       setLoading(false);
     }
@@ -114,43 +131,18 @@ export default function TermometroTab({ quemSouEu, settings }) {
   async function handleSalvar() {
     setSalvando(true);
     try {
-      await salvarRespostaDiaria(quemSouEu, {
-        nivel,
-        motivo: motivo.trim(),
-      });
-
-      toast.love(`Seu coração foi registrado com sucesso, ${meuNome}! 💜`);
+      await salvarRespostaDiaria(quemSouEu, { nivel, motivo });
       setMotivo('');
-
-      // Recarrega e calcula sintonia
-      const listaAtualizada = await buscarRespostasDiarias();
-      setRespostas(listaAtualizada);
-
-      const r1 = listaAtualizada.find(
-        (r) => r.parceiro === 'parceiro1' && temRespostaValida(r)
-      );
-      const r2 = listaAtualizada.find(
-        (r) => r.parceiro === 'parceiro2' && temRespostaValida(r)
-      );
-
-      if (r1 && r2) {
-        const pct = calcularCompatibilidade(
-          r1.respostas.nivel,
-          r2.respostas.nivel
-        );
-        salvarCapsulaSintonia(getTodayDateString(), { sintonia_pct: pct }).catch(
-          () => {}
-        );
-      }
+      toast.love('Momento registrado com sucesso! 💜');
+      carregar();
     } catch (err) {
       console.error(err);
-      toast.error('Não consegui salvar seu registro agora. Tente de novo!');
+      toast.error('Não consegui salvar o momento agora. Tente de novo!');
     } finally {
       setSalvando(false);
     }
   }
 
-  // Abrir Modal de Edição
   function handleAbrirEdicao(item) {
     setEditModal({
       isOpen: true,
@@ -160,34 +152,32 @@ export default function TermometroTab({ quemSouEu, settings }) {
     });
   }
 
-  // Salvar Edição
   async function handleSalvarEdicao() {
     if (!editModal.id) return;
     try {
       await editarRespostaDiaria(editModal.id, {
         nivel: editModal.nivel,
-        motivo: editModal.motivo.trim(),
+        motivo: editModal.motivo,
       });
-      toast.success('Registro de humor atualizado!');
+      toast.success('Momento atualizado com sucesso!');
       setEditModal({ isOpen: false, id: null, nivel: 80, motivo: '' });
       carregar();
     } catch (err) {
       console.error(err);
-      toast.error('Erro ao atualizar registro.');
+      toast.error('Erro ao editar. Tente novamente.');
     }
   }
 
-  // Confirmar Exclusão
-  async function handleConfirmDelete() {
+  async function handleConfirmarExclusao() {
     if (!deleteModal.id) return;
     try {
       await excluirRespostaDiaria(deleteModal.id);
-      toast.success('Registro excluído do feed.');
+      toast.success('Momento excluído do feed!');
       setDeleteModal({ isOpen: false, id: null });
       carregar();
     } catch (err) {
       console.error(err);
-      toast.error('Erro ao excluir registro.');
+      toast.error('Erro ao excluir momento.');
     }
   }
 
@@ -225,12 +215,24 @@ export default function TermometroTab({ quemSouEu, settings }) {
       {/* Card Sintonia do Casal */}
       {sintoniaAtual !== null && (
         <div className="card-brut p-4 text-center mb-5 bg-cyan shadow-brut animate-popIn">
-          <div className="flex items-center justify-center gap-1.5 mb-1.5">
-            <span className="text-sm">{settings.emoji1}</span>
+          <div className="flex items-center justify-center gap-2 mb-1.5">
+            <Avatar
+              foto={settings.foto1}
+              emoji={settings.emoji1 || '🐰'}
+              nome={settings.apelido1}
+              size="xs"
+              corFundo="bg-yellow"
+            />
             <p className="badge-brut bg-white text-ink text-[9px]">
               Sintonia Atual: {sintoniaAtual}%
             </p>
-            <span className="text-sm">{settings.emoji2}</span>
+            <Avatar
+              foto={settings.foto2}
+              emoji={settings.emoji2 || '🦊'}
+              nome={settings.apelido2}
+              size="xs"
+              corFundo="bg-pink"
+            />
           </div>
           <p className="text-xs font-black text-ink/90">
             {getFraseSintonia(sintoniaAtual)}
@@ -241,8 +243,14 @@ export default function TermometroTab({ quemSouEu, settings }) {
       {/* Formulário Novo Registro de Humor */}
       <div className="card-brut p-4 sm:p-5 mb-6 shadow-brut">
         <div className="flex items-center justify-between mb-2">
-          <div className="flex items-center gap-1.5">
-            <span className="text-base">{meuEmoji}</span>
+          <div className="flex items-center gap-2">
+            <Avatar
+              foto={meuFoto}
+              emoji={meuEmoji}
+              nome={meuNome}
+              size="sm"
+              corFundo={ehP1 ? 'bg-yellow' : 'bg-pink'}
+            />
             <p className="badge-brut bg-purple text-ink text-[10px]">
               {meuNome} (Você)
             </p>
@@ -310,15 +318,21 @@ export default function TermometroTab({ quemSouEu, settings }) {
             const ehParceiro1 = item.parceiro === 'parceiro1';
             const nomeAutor = ehParceiro1 ? settings.apelido1 : settings.apelido2;
             const emojiAutor = ehParceiro1 ? settings.emoji1 : settings.emoji2;
+            const fotoAutor = ehParceiro1 ? settings.foto1 : settings.foto2;
             const corBadge = ehParceiro1 ? 'bg-yellow' : 'bg-pink';
-            const ehMeu = item.parceiro === quemSouEu;
 
             return (
               <div key={item.id} className="card-brut p-4 shadow-brutsm relative">
                 {/* Header do Card */}
                 <div className="flex items-center justify-between mb-2">
-                  <div className="flex items-center gap-1.5">
-                    <span className="text-base">{emojiAutor}</span>
+                  <div className="flex items-center gap-2">
+                    <Avatar
+                      foto={fotoAutor}
+                      emoji={emojiAutor}
+                      nome={nomeAutor}
+                      size="sm"
+                      corFundo={corBadge}
+                    />
                     <span className={`badge-brut ${corBadge} text-ink text-[10px]`}>
                       {nomeAutor}
                     </span>
@@ -329,7 +343,7 @@ export default function TermometroTab({ quemSouEu, settings }) {
                       {formatarDataHora(item.criado_em)}
                     </span>
 
-                    {/* Botões de Ação para Qualquer Entrada */}
+                    {/* Botões de Ação */}
                     <div className="flex items-center gap-1">
                       <button
                         onClick={() => handleAbrirEdicao(item)}
@@ -349,36 +363,31 @@ export default function TermometroTab({ quemSouEu, settings }) {
                   </div>
                 </div>
 
-                {/* Nível de Humor & Barra Visual */}
-                <div className="bg-ink/5 rounded-xl p-3 border-2 border-ink/10 my-1.5">
-                  <div className="flex items-center justify-between mb-1.5">
-                    <div className="flex items-center gap-2">
-                      <span className="text-2xl select-none">
-                        {getMoodEmoji(item.respostas?.nivel)}
+                {/* Conteúdo do Registro */}
+                <div className="flex items-center gap-3 my-2">
+                  <span className="text-3xl select-none">
+                    {getMoodEmoji(item.respostas?.nivel ?? 50)}
+                  </span>
+                  <div className="flex-1">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-black text-ink">
+                        {item.respostas?.nivel ?? 0}/100
                       </span>
-                      <div>
-                        <p className="text-xs font-black text-ink">
-                          {getMoodLabel(item.respostas?.nivel)}
-                        </p>
-                        <p className="text-[10px] font-bold text-ink/50">
-                          {item.respostas?.nivel}/100 de felicidade
-                        </p>
-                      </div>
+                      <span className="text-[10px] font-bold text-ink/60">
+                        {getMoodLabel(item.respostas?.nivel ?? 50)}
+                      </span>
                     </div>
-                  </div>
-
-                  {/* Mini barra de progresso */}
-                  <div className="w-full bg-white rounded-full h-2.5 border-2 border-ink overflow-hidden">
-                    <div
-                      className="h-full bg-pink transition-all"
-                      style={{ width: `${Math.max(5, item.respostas?.nivel || 0)}%` }}
-                    />
+                    <div className="w-full bg-ink/10 rounded-full h-2 mt-1 overflow-hidden border border-ink/20">
+                      <div
+                        className={`h-full ${corBadge}`}
+                        style={{ width: `${Math.min(100, Math.max(0, item.respostas?.nivel ?? 0))}%` }}
+                      />
+                    </div>
                   </div>
                 </div>
 
-                {/* Motivo / Mensagem do Humor */}
                 {item.respostas?.motivo && (
-                  <p className="text-xs text-ink/80 font-medium mt-2 italic bg-purple/10 p-2.5 rounded-xl border border-ink/10 leading-relaxed">
+                  <p className="text-xs font-semibold text-ink/80 mt-2 bg-ink/5 p-2.5 rounded-xl border border-ink/10 leading-relaxed break-words">
                     "{item.respostas.motivo}"
                   </p>
                 )}
@@ -388,7 +397,7 @@ export default function TermometroTab({ quemSouEu, settings }) {
         )}
       </div>
 
-      {/* Modal de Edição */}
+      {/* Modal Edição */}
       <Modal
         isOpen={editModal.isOpen}
         onClose={() => setEditModal({ isOpen: false, id: null, nivel: 80, motivo: '' })}
@@ -399,39 +408,29 @@ export default function TermometroTab({ quemSouEu, settings }) {
         onConfirm={handleSalvarEdicao}
       >
         <div className="space-y-3">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-extrabold text-ink">
-              Nível: {editModal.nivel}/100
-            </span>
-            <span className="text-3xl">
-              {getMoodEmoji(editModal.nivel)}
-            </span>
+          <div className="text-center">
+            <p className="text-4xl">{getMoodEmoji(editModal.nivel)}</p>
+            <p className="text-xs font-bold text-ink/70 mt-1">{getMoodLabel(editModal.nivel)}</p>
           </div>
-
           <input
             type="range"
             min="0"
             max="100"
             value={editModal.nivel}
-            onChange={(e) =>
-              setEditModal((prev) => ({ ...prev, nivel: Number(e.target.value) }))
-            }
-            className="w-full cursor-pointer"
+            onChange={(e) => setEditModal((prev) => ({ ...prev, nivel: Number(e.target.value) }))}
+            className="w-full"
           />
-
           <textarea
             value={editModal.motivo}
-            onChange={(e) =>
-              setEditModal((prev) => ({ ...prev, motivo: e.target.value }))
-            }
-            placeholder="O que te fez se sentir assim?"
-            rows={2}
-            className="w-full rounded-xl border-3 border-ink px-3 py-2 outline-none bg-white text-xs font-medium resize-none"
+            onChange={(e) => setEditModal((prev) => ({ ...prev, motivo: e.target.value }))}
+            rows={3}
+            placeholder="Atualize o motivo..."
+            className="w-full rounded-xl border-3 border-ink px-3 py-2 text-xs font-medium outline-none bg-white resize-none"
           />
         </div>
       </Modal>
 
-      {/* Modal de Exclusão */}
+      {/* Modal Exclusão */}
       <Modal
         isOpen={deleteModal.isOpen}
         onClose={() => setDeleteModal({ isOpen: false, id: null })}
@@ -439,10 +438,10 @@ export default function TermometroTab({ quemSouEu, settings }) {
         badgeText="Atenção"
         badgeColor="bg-pink"
         confirmText="Sim, Excluir"
-        onConfirm={handleConfirmDelete}
+        onConfirm={handleConfirmarExclusao}
         isDestructive={true}
       >
-        <p>Tem certeza que deseja remover este momento do feed do casal?</p>
+        <p>Tem certeza que deseja excluir este momento do histórico do casal?</p>
       </Modal>
     </div>
   );

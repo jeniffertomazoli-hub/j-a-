@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   buscarTopicosDoDia,
   criarTopico,
@@ -20,6 +20,7 @@ import { compressImage } from '../../lib/imageUtils';
 import { useToast } from '../../context/ToastContext';
 import Modal from '../Modal';
 import RouletteModal from '../RouletteModal';
+import Avatar from '../Avatar';
 import confetti from 'canvas-confetti';
 
 // ---------------------------------------------------------------
@@ -86,8 +87,14 @@ function formatHora(iso) {
 export default function TopicosTab({ quemSouEu, settings }) {
   const toast = useToast();
   const hojeIso = getTodayDateString();
-  const meuNome = quemSouEu === 'parceiro1' ? settings.apelido1 : settings.apelido2;
-  const outroNome = quemSouEu === 'parceiro1' ? settings.apelido2 : settings.apelido1;
+  const ehP1 = quemSouEu === 'parceiro1';
+  const meuNome = ehP1 ? settings.apelido1 : settings.apelido2;
+  const meuEmoji = ehP1 ? settings.emoji1 : settings.emoji2;
+  const meuFoto = ehP1 ? settings.foto1 : settings.foto2;
+
+  const outroNome = ehP1 ? settings.apelido2 : settings.apelido1;
+  const outroEmoji = ehP1 ? settings.emoji2 : settings.emoji1;
+  const outroFoto = ehP1 ? settings.foto2 : settings.foto1;
 
   const [loading, setLoading] = useState(true);
   const [categoriaAtiva, setCategoriaAtiva] = useState('roles');
@@ -116,7 +123,7 @@ export default function TopicosTab({ quemSouEu, settings }) {
   const [previewFoto, setPreviewFoto] = useState(null);
   const [uploadandoFoto, setUploadandoFoto] = useState(false);
   const [imagemCheia, setImagemCheia] = useState(null);
-  const fileInputRef = React.useRef(null);
+  const fileInputRef = useRef(null);
 
   useEffect(() => {
     carregarTudo();
@@ -330,9 +337,27 @@ export default function TopicosTab({ quemSouEu, settings }) {
         </p>
 
         <div className="flex items-center justify-between gap-2 flex-wrap">
-          <div className="flex gap-2 text-[10px] font-bold text-ink/70">
-            <span>{settings.emoji1} {euRespondiPergunta && quemSouEu === 'parceiro1' ? '✅' : (respostasPergunta.some(r => r.parceiro === 'parceiro1') ? '✅' : '⏳')}</span>
-            <span>{settings.emoji2} {respostasPergunta.some(r => r.parceiro === 'parceiro2') ? '✅' : '⏳'}</span>
+          <div className="flex items-center gap-3 text-[10px] font-bold text-ink/70">
+            <div className="flex items-center gap-1">
+              <Avatar
+                foto={settings.foto1}
+                emoji={settings.emoji1 || '🐰'}
+                nome={settings.apelido1}
+                size="xs"
+                corFundo="bg-yellow"
+              />
+              <span>{respostasPergunta.some((r) => r.parceiro === 'parceiro1') ? '✅' : '⏳'}</span>
+            </div>
+            <div className="flex items-center gap-1">
+              <Avatar
+                foto={settings.foto2}
+                emoji={settings.emoji2 || '🦊'}
+                nome={settings.apelido2}
+                size="xs"
+                corFundo="bg-pink"
+              />
+              <span>{respostasPergunta.some((r) => r.parceiro === 'parceiro2') ? '✅' : '⏳'}</span>
+            </div>
           </div>
 
           {!euRespondiPergunta ? (
@@ -377,8 +402,14 @@ export default function TopicosTab({ quemSouEu, settings }) {
         <div className="space-y-2">
           {/* Jeniffer */}
           <div className="bg-white rounded-xl p-2.5 border-2 border-ink shadow-brutsm flex items-center justify-between gap-2">
-            <div className="flex items-center gap-1.5 min-w-0">
-              <span className="text-lg shrink-0">{settings.emoji1 || '🐰'}</span>
+            <div className="flex items-center gap-2 min-w-0">
+              <Avatar
+                foto={settings.foto1}
+                emoji={settings.emoji1 || '🐰'}
+                nome={settings.apelido1}
+                size="sm"
+                corFundo="bg-yellow"
+              />
               <span className="text-xs font-black text-ink truncate">{settings.apelido1}:</span>
             </div>
             <span className={`badge-brut text-[10px] shrink-0 ${statusJogar1 ? statusJogar1.quer_jogar ? 'bg-cyan text-ink' : 'bg-pink text-white' : 'bg-ink/10 text-ink/70'}`}>
@@ -388,8 +419,14 @@ export default function TopicosTab({ quemSouEu, settings }) {
 
           {/* Alvaro */}
           <div className="bg-white rounded-xl p-2.5 border-2 border-ink shadow-brutsm flex items-center justify-between gap-2">
-            <div className="flex items-center gap-1.5 min-w-0">
-              <span className="text-lg shrink-0">{settings.emoji2 || '🦊'}</span>
+            <div className="flex items-center gap-2 min-w-0">
+              <Avatar
+                foto={settings.foto2}
+                emoji={settings.emoji2 || '🦊'}
+                nome={settings.apelido2}
+                size="sm"
+                corFundo="bg-pink"
+              />
               <span className="text-xs font-black text-ink truncate">{settings.apelido2}:</span>
             </div>
             <span className={`badge-brut text-[10px] shrink-0 ${statusJogar2 ? statusJogar2.quer_jogar ? 'bg-cyan text-ink' : 'bg-pink text-white' : 'bg-ink/10 text-ink/70'}`}>
@@ -581,16 +618,27 @@ export default function TopicosTab({ quemSouEu, settings }) {
             </p>
           ) : (
             mensagens.map((msg) => {
-              const autorNome = msg.parceiro === 'parceiro1' ? settings.apelido1 : settings.apelido2;
-              const autorEmoji = msg.parceiro === 'parceiro1' ? settings.emoji1 : settings.emoji2;
-              const corBadge = msg.parceiro === 'parceiro1' ? 'bg-yellow' : 'bg-pink';
+              const ehMsgP1 = msg.parceiro === 'parceiro1';
+              const autorNome = ehMsgP1 ? settings.apelido1 : settings.apelido2;
+              const autorEmoji = ehMsgP1 ? settings.emoji1 : settings.emoji2;
+              const autorFoto = ehMsgP1 ? settings.foto1 : settings.foto2;
+              const corBadge = ehMsgP1 ? 'bg-yellow' : 'bg-pink';
 
               return (
                 <div key={msg.id} className="card-brut px-4 py-3 shadow-brutsm">
                   <div className="flex items-center justify-between mb-1.5">
-                    <span className={`badge-brut ${corBadge} text-ink text-[10px]`}>
-                      {msg.emoji} {autorEmoji} {autorNome}
-                    </span>
+                    <div className="flex items-center gap-1.5">
+                      <Avatar
+                        foto={autorFoto}
+                        emoji={autorEmoji}
+                        nome={autorNome}
+                        size="xs"
+                        corFundo={corBadge}
+                      />
+                      <span className={`badge-brut ${corBadge} text-ink text-[10px]`}>
+                        {msg.emoji} {autorNome}
+                      </span>
+                    </div>
 
                     <div className="flex items-center gap-2">
                       <span className="text-[10px] text-ink/40 font-bold">
