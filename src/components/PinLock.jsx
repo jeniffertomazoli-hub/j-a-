@@ -1,11 +1,30 @@
-import React, { useState } from 'react';
-import { setAuthenticated, getCoupleSettings } from '../lib/storage';
+import React, { useState, useEffect } from 'react';
+import { setAuthenticated, getCoupleSettings, saveCoupleSettings } from '../lib/storage';
+import { buscarConfiguracoesCasalNuvem } from '../lib/supabase';
+import InstallPwaModal from './InstallPwaModal';
 
-export default function PinLock({ onEntrar }) {
+export default function PinLock({ onEntrar, settings: propsSettings }) {
   const [pin, setPin] = useState('');
   const [hasError, setHasError] = useState(false);
-  const settings = getCoupleSettings();
-  const validPin = settings.pinCode || '1234';
+  const [settings, setSettings] = useState(propsSettings || getCoupleSettings());
+  const [isInstallOpen, setIsInstallOpen] = useState(false);
+
+  useEffect(() => {
+    if (propsSettings) setSettings(propsSettings);
+  }, [propsSettings]);
+
+  useEffect(() => {
+    async function carregarNuvem() {
+      const nuvem = await buscarConfiguracoesCasalNuvem();
+      if (nuvem) {
+        saveCoupleSettings(nuvem);
+        setSettings(nuvem);
+      }
+    }
+    carregarNuvem();
+  }, []);
+
+  const validPin = settings?.pinCode || '1234';
 
   function handleSubmit(e) {
     e?.preventDefault();
@@ -41,12 +60,16 @@ export default function PinLock({ onEntrar }) {
   }
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center px-6 text-center bg-royal">
-      <div className="w-16 h-16 rounded-full bg-yellow border-3 border-ink flex items-center justify-center font-display font-extrabold text-3xl text-ink mb-3 shadow-brut animate-popIn">
-        S
+    <div className="min-h-screen flex flex-col items-center justify-center px-6 text-center bg-royal animate-fadeIn">
+      {/* Logo com ícone PWA */}
+      <div className="relative mb-3">
+        <div className="w-16 h-16 rounded-2xl bg-yellow border-3 border-ink flex items-center justify-center font-display font-extrabold text-3xl text-ink shadow-brut animate-popIn">
+          S
+        </div>
+        <span className="absolute -bottom-1 -right-1 text-sm">💜</span>
       </div>
 
-      <h1 className="font-display text-3xl sm:text-4xl font-extrabold text-white mb-2 animate-fadeUp">
+      <h1 className="font-display text-3xl sm:text-4xl font-extrabold text-white mb-1 animate-fadeUp">
         Sintonia
       </h1>
       <p className="text-xs text-white/80 font-medium mb-6 animate-fadeUp">
@@ -112,6 +135,20 @@ export default function PinLock({ onEntrar }) {
           </button>
         </div>
       </div>
+
+      {/* Botão Instalar PWA no rodapé */}
+      <button
+        onClick={() => setIsInstallOpen(true)}
+        className="mt-6 text-xs text-yellow font-black underline flex items-center gap-1.5 hover:text-yellow/80 transition"
+      >
+        <span>📲</span>
+        <span>Instalar Sintonia no Celular</span>
+      </button>
+
+      <InstallPwaModal
+        isOpen={isInstallOpen}
+        onClose={() => setIsInstallOpen(false)}
+      />
     </div>
   );
 }

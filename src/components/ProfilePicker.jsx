@@ -1,20 +1,45 @@
-import React from 'react';
-import { getCoupleSettings } from '../lib/storage';
+import React, { useState, useEffect } from 'react';
+import { getCoupleSettings, saveCoupleSettings } from '../lib/storage';
+import { buscarConfiguracoesCasalNuvem } from '../lib/supabase';
+import Avatar from './Avatar';
+import InstallPwaModal from './InstallPwaModal';
 
-export default function ProfilePicker({ onEscolher }) {
-  const settings = getCoupleSettings();
+export default function ProfilePicker({ onEscolher, settings: propsSettings }) {
+  const [settings, setSettings] = useState(propsSettings || getCoupleSettings());
+  const [isInstallOpen, setIsInstallOpen] = useState(false);
+
+  useEffect(() => {
+    if (propsSettings) {
+      setSettings(propsSettings);
+    }
+  }, [propsSettings]);
+
+  useEffect(() => {
+    async function carregarNuvem() {
+      const nuvem = await buscarConfiguracoesCasalNuvem();
+      if (nuvem && (nuvem.foto1 || nuvem.foto2 || nuvem.apelido1)) {
+        saveCoupleSettings(nuvem);
+        setSettings(nuvem);
+      }
+    }
+    carregarNuvem();
+  }, []);
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-center px-4 sm:px-6 text-center bg-royal animate-fadeIn">
-      <div className="w-16 h-16 rounded-full bg-yellow border-3 border-ink flex items-center justify-center font-display font-extrabold text-3xl text-ink mb-3 shadow-brut animate-popIn">
-        S
+      {/* Logo com ícone PWA */}
+      <div className="relative mb-3">
+        <div className="w-16 h-16 rounded-2xl bg-yellow border-3 border-ink flex items-center justify-center font-display font-extrabold text-3xl text-ink shadow-brut animate-popIn">
+          S
+        </div>
+        <span className="absolute -bottom-1 -right-1 text-sm">💜</span>
       </div>
 
-      <p className="badge-brut bg-cyan text-ink mb-3">
+      <p className="badge-brut bg-cyan text-ink mb-2">
         Quem está aqui agora?
       </p>
 
-      <h2 className="font-display text-2xl sm:text-3xl font-extrabold text-white mb-6">
+      <h2 className="font-display text-2xl sm:text-3xl font-extrabold text-white mb-5">
         Escolha o seu perfil
       </h2>
 
@@ -22,41 +47,70 @@ export default function ProfilePicker({ onEscolher }) {
         {/* Jeniffer */}
         <button
           onClick={() => onEscolher('parceiro1')}
-          className="btn-brut py-3.5 px-5 bg-pink text-ink text-base font-extrabold flex items-center justify-center gap-3 shadow-brut hover:scale-102 transition"
+          className="btn-brut py-3 px-4 bg-pink text-ink text-base font-extrabold flex items-center justify-start gap-3.5 shadow-brut hover:scale-102 transition group"
         >
-          {settings.foto1 ? (
-            <img
-              src={settings.foto1}
-              alt={settings.apelido1}
-              className="w-10 h-10 rounded-full border-2 border-ink object-cover shrink-0 shadow-brutsm"
-            />
-          ) : (
-            <span className="text-2xl shrink-0">{settings.emoji1 || '🐰'}</span>
-          )}
-          <span className="truncate">{settings.apelido1}</span>
+          <Avatar
+            foto={settings?.foto1}
+            emoji={settings?.emoji1 || '🐰'}
+            nome={settings?.apelido1 || 'Jeniffer'}
+            size="md"
+            corFundo="bg-yellow"
+          />
+          <div className="flex-1 text-left min-w-0">
+            <span className="truncate block font-black text-base leading-tight">
+              {settings?.apelido1 || 'Jeniffer'}
+            </span>
+            <span className="text-[10px] text-ink/60 font-bold block">
+              Entrar como parceira
+            </span>
+          </div>
+          <span className="text-sm font-black opacity-40 group-hover:opacity-100 transition">→</span>
         </button>
 
         {/* Alvaro */}
         <button
           onClick={() => onEscolher('parceiro2')}
-          className="btn-brut py-3.5 px-5 bg-purple text-ink text-base font-extrabold flex items-center justify-center gap-3 shadow-brut hover:scale-102 transition"
+          className="btn-brut py-3 px-4 bg-purple text-ink text-base font-extrabold flex items-center justify-start gap-3.5 shadow-brut hover:scale-102 transition group"
         >
-          {settings.foto2 ? (
-            <img
-              src={settings.foto2}
-              alt={settings.apelido2}
-              className="w-10 h-10 rounded-full border-2 border-ink object-cover shrink-0 shadow-brutsm"
-            />
-          ) : (
-            <span className="text-2xl shrink-0">{settings.emoji2 || '🦊'}</span>
-          )}
-          <span className="truncate">{settings.apelido2}</span>
+          <Avatar
+            foto={settings?.foto2}
+            emoji={settings?.emoji2 || '🦊'}
+            nome={settings?.apelido2 || 'Alvaro'}
+            size="md"
+            corFundo="bg-pink"
+          />
+          <div className="flex-1 text-left min-w-0">
+            <span className="truncate block font-black text-base leading-tight">
+              {settings?.apelido2 || 'Alvaro'}
+            </span>
+            <span className="text-[10px] text-ink/60 font-bold block">
+              Entrar como parceiro
+            </span>
+          </div>
+          <span className="text-sm font-black opacity-40 group-hover:opacity-100 transition">→</span>
         </button>
       </div>
 
-      <p className="text-xs text-white/80 font-medium mt-7 max-w-xs leading-relaxed">
-        Essa preferência fica salva neste aparelho para sabermos se as respostas, fotos e momentos são da Jeniffer ou do Alvaro 💜
+      {/* Botão de Instalar App no Celular */}
+      <div className="mt-6 animate-fadeUp">
+        <button
+          onClick={() => setIsInstallOpen(true)}
+          className="btn-brut py-2 px-3.5 bg-yellow text-ink text-xs font-black shadow-brutsm flex items-center gap-1.5 hover:scale-102 transition"
+        >
+          <span>📲</span>
+          <span>Instalar App na Tela do Celular</span>
+        </button>
+      </div>
+
+      <p className="text-[11px] text-white/70 font-medium mt-4 max-w-xs leading-relaxed">
+        Essa preferência fica salva neste aparelho para sabermos quem está postando e respondendo 💜
       </p>
+
+      {/* Modal PWA */}
+      <InstallPwaModal
+        isOpen={isInstallOpen}
+        onClose={() => setIsInstallOpen(false)}
+      />
     </div>
   );
 }

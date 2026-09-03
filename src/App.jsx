@@ -39,7 +39,7 @@ export function AppContent() {
   useEffect(() => {
     async function carregarSettingsNuvem() {
       const nuvem = await buscarConfiguracoesCasalNuvem();
-      if (nuvem) {
+      if (nuvem && (nuvem.foto1 || nuvem.foto2 || nuvem.apelido1)) {
         saveCoupleSettings(nuvem);
         setSettings(nuvem);
       }
@@ -80,11 +80,11 @@ export function AppContent() {
   }
 
   if (!autenticado) {
-    return <PinLock onEntrar={() => setAutenticado(true)} />;
+    return <PinLock settings={settings} onEntrar={() => setAutenticado(true)} />;
   }
 
   if (!quemSouEu) {
-    return <ProfilePicker onEscolher={handleEscolherPerfil} />;
+    return <ProfilePicker settings={settings} onEscolher={handleEscolherPerfil} />;
   }
 
   const meuNome = quemSouEu === 'parceiro1' ? settings.apelido1 : settings.apelido2;

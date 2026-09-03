@@ -7,6 +7,8 @@ import {
   sendAppNotification,
 } from '../lib/notifications';
 import { useToast } from '../context/ToastContext';
+import Avatar from './Avatar';
+import InstallPwaModal from './InstallPwaModal';
 
 export default function Header({
   nomeEu,
@@ -19,6 +21,7 @@ export default function Header({
   const toast = useToast();
   const timeTogether = calculateDaysTogether(settings?.dataInicio);
   const [notifPermission, setNotifPermission] = useState(getNotificationPermission());
+  const [isInstallOpen, setIsInstallOpen] = useState(false);
 
   useEffect(() => {
     setNotifPermission(getNotificationPermission());
@@ -51,88 +54,97 @@ export default function Header({
   }
 
   return (
-    <div className="max-w-3xl mx-auto px-3 sm:px-5 pt-2.5 pb-2 flex items-center justify-between gap-2">
-      {/* Brand & Days Counter */}
-      <div className="flex items-center gap-2 min-w-0">
-        <div className="w-8 h-8 rounded-full bg-yellow border-3 border-ink flex items-center justify-center font-display font-extrabold text-ink shrink-0 text-sm shadow-brutsm">
-          S
-        </div>
-        <div className="min-w-0">
-          <span className="font-display font-extrabold text-white text-sm sm:text-base truncate block leading-tight">
-            Sintonia
-          </span>
-          {timeTogether ? (
-            <span className="text-[10px] font-bold text-yellow/90 block truncate leading-none mt-0.5">
-              💜 {timeTogether.totalDays} dias juntos
+    <>
+      <div className="max-w-3xl mx-auto px-3 sm:px-5 pt-2.5 pb-2 flex items-center justify-between gap-2">
+        {/* Brand & Days Counter */}
+        <div className="flex items-center gap-2 min-w-0">
+          <div className="w-8 h-8 rounded-full bg-yellow border-3 border-ink flex items-center justify-center font-display font-extrabold text-ink shrink-0 text-sm shadow-brutsm">
+            S
+          </div>
+          <div className="min-w-0">
+            <span className="font-display font-extrabold text-white text-sm sm:text-base truncate block leading-tight">
+              Sintonia
             </span>
-          ) : (
-            <span className="text-[10px] font-bold text-white/70 block truncate leading-none mt-0.5">
-              {settings.apelido1} & {settings.apelido2}
-            </span>
-          )}
+            {timeTogether ? (
+              <span className="text-[10px] font-bold text-yellow/90 block truncate leading-none mt-0.5">
+                💜 {timeTogether.totalDays} dias juntos
+              </span>
+            ) : (
+              <span className="text-[10px] font-bold text-white/70 block truncate leading-none mt-0.5">
+                {settings?.apelido1 || 'Jeniffer'} & {settings?.apelido2 || 'Alvaro'}
+              </span>
+            )}
+          </div>
         </div>
-      </div>
 
-      {/* Action Controls */}
-      <div className="flex items-center gap-1.5 shrink-0">
-        {/* Botão Notificações */}
-        <button
-          onClick={handleToggleNotifications}
-          className={`w-8 h-8 rounded-full border-3 border-ink flex items-center justify-center text-xs sm:text-sm shadow-brutsm transition active:scale-95 ${
-            notifPermission === 'granted'
-              ? 'bg-yellow text-ink'
-              : 'bg-white/80 text-ink/70 hover:bg-yellow'
-          }`}
-          title={
-            notifPermission === 'granted'
-              ? 'Notificações Ativas (clique para testar)'
-              : 'Ativar Notificações no Celular'
-          }
-          aria-label="Notificações"
-        >
-          {notifPermission === 'granted' ? '🔔' : '🔕'}
-        </button>
+        {/* Action Controls */}
+        <div className="flex items-center gap-1.5 shrink-0">
+          {/* Botão Instalar App (PWA) */}
+          <button
+            onClick={() => setIsInstallOpen(true)}
+            className="w-8 h-8 rounded-full border-3 border-ink bg-white text-ink flex items-center justify-center text-xs shadow-brutsm hover:bg-yellow transition active:scale-95"
+            title="Instalar App no Celular 📲"
+            aria-label="Instalar App"
+          >
+            📲
+          </button>
 
-        {/* Configurações */}
-        <button
-          onClick={onOpenSettings}
-          className="w-8 h-8 rounded-full border-3 border-ink bg-white text-ink flex items-center justify-center text-xs sm:text-sm shadow-brutsm hover:bg-yellow transition active:scale-95"
-          title="Configurações do Casal"
-          aria-label="Configurações"
-        >
-          ⚙️
-        </button>
+          {/* Botão Notificações */}
+          <button
+            onClick={handleToggleNotifications}
+            className={`w-8 h-8 rounded-full border-3 border-ink flex items-center justify-center text-xs sm:text-sm shadow-brutsm transition active:scale-95 ${
+              notifPermission === 'granted'
+                ? 'bg-yellow text-ink'
+                : 'bg-white/80 text-ink/70 hover:bg-yellow'
+            }`}
+            title={
+              notifPermission === 'granted'
+                ? 'Notificações Ativas (clique para testar)'
+                : 'Ativar Notificações no Celular'
+            }
+            aria-label="Notificações"
+          >
+            {notifPermission === 'granted' ? '🔔' : '🔕'}
+          </button>
 
-        {/* Trocar Perfil */}
-        <button
-          onClick={onTrocarPerfil}
-          className="flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-extrabold border-3 border-ink bg-white text-ink whitespace-nowrap shadow-brutsm hover:bg-yellow transition active:scale-95"
-        >
-          Trocar
-        </button>
+          {/* Configurações */}
+          <button
+            onClick={onOpenSettings}
+            className="w-8 h-8 rounded-full border-3 border-ink bg-white text-ink flex items-center justify-center text-xs sm:text-sm shadow-brutsm hover:bg-yellow transition active:scale-95"
+            title="Configurações do Casal"
+            aria-label="Configurações"
+          >
+            ⚙️
+          </button>
 
-        {/* Avatar com Foto Real ou Emoji */}
-        <div className="flex items-center gap-1 pl-0.5">
-          <span className="text-xs font-bold text-white hidden sm:inline whitespace-nowrap">
-            Olá, {nomeEu}!
-          </span>
-          {fotoEu ? (
-            <img
-              src={fotoEu}
-              alt={nomeEu}
-              className="w-8 h-8 rounded-full border-3 border-ink object-cover shrink-0 shadow-brutsm"
-              title={`Você é ${nomeEu}`}
+          {/* Trocar Perfil */}
+          <button
+            onClick={onTrocarPerfil}
+            className="flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-extrabold border-3 border-ink bg-white text-ink whitespace-nowrap shadow-brutsm hover:bg-yellow transition active:scale-95"
+          >
+            Trocar
+          </button>
+
+          {/* Avatar com Foto Real ou Emoji */}
+          <div className="flex items-center gap-1 pl-0.5">
+            <span className="text-xs font-bold text-white hidden sm:inline whitespace-nowrap">
+              Olá, {nomeEu}!
+            </span>
+            <Avatar
+              foto={fotoEu}
+              emoji={emojiEu || '🐰'}
+              nome={nomeEu}
+              size="sm"
+              corFundo="bg-cyan"
             />
-          ) : (
-            <span
-              className="w-8 h-8 rounded-full bg-cyan border-3 border-ink flex items-center justify-center text-sm shrink-0 shadow-brutsm"
-              title={`Você é ${nomeEu}`}
-            >
-              {emojiEu || '🐰'}
-            </span>
-          )}
+          </div>
         </div>
       </div>
-    </div>
+
+      <InstallPwaModal
+        isOpen={isInstallOpen}
+        onClose={() => setIsInstallOpen(false)}
+      />
+    </>
   );
 }
