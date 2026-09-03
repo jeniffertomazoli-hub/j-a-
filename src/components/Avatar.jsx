@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 
 const SIZES = {
   xs: 'w-5 h-5 text-[10px]',
@@ -17,13 +17,15 @@ export default function Avatar({
   corFundo = 'bg-yellow',
   className = '',
 }) {
+  const [imgError, setImgError] = useState(false);
   const sizeClass = SIZES[size] || SIZES.md;
 
-  if (foto) {
+  if (foto && !imgError) {
     return (
       <img
         src={foto}
         alt={nome || 'Avatar'}
+        onError={() => setImgError(true)}
         className={`${sizeClass} rounded-full border-2 border-ink object-cover shrink-0 shadow-brutsm ${className}`}
         title={nome}
         loading="lazy"

@@ -3,7 +3,12 @@ import Modal from './Modal';
 import { saveCoupleSettings } from '../lib/storage';
 import { useToast } from '../context/ToastContext';
 import { compressImage } from '../lib/imageUtils';
-import { uploadImagemMemoria, salvarConfiguracoesCasalNuvem } from '../lib/supabase';
+import {
+  uploadImagemMemoria,
+  salvarConfiguracoesCasalNuvem,
+  atualizarFotoPerfilNuvem,
+  buscarConfiguracoesCasalNuvem,
+} from '../lib/supabase';
 import {
   isNotificationSupported,
   getNotificationPermission,
@@ -36,16 +41,23 @@ export default function CoupleSettingsModal({ isOpen, onClose, settings, onSetti
   useEffect(() => {
     if (isOpen) {
       setNotifPermission(getNotificationPermission());
-      setFormData({
-        apelido1: settings?.apelido1 || 'Jeniffer',
-        emoji1: settings?.emoji1 || '🐰',
-        foto1: settings?.foto1 || '',
-        apelido2: settings?.apelido2 || 'Alvaro',
-        emoji2: settings?.emoji2 || '🦊',
-        foto2: settings?.foto2 || '',
-        dataInicio: settings?.dataInicio || '',
-        pinCode: settings?.pinCode || '1234',
-      });
+      
+      // Carrega o estado mais recente da nuvem ao abrir para garantir dados frescos de ambos
+      async function carregarFresco() {
+        const nuvem = await buscarConfiguracoesCasalNuvem();
+        const base = nuvem || settings || {};
+        setFormData({
+          apelido1: base.apelido1 || 'Jeniffer',
+          emoji1: base.emoji1 || '🐰',
+          foto1: base.foto1 || '',
+          apelido2: base.apelido2 || 'Alvaro',
+          emoji2: base.emoji2 || '🦊',
+          foto2: base.foto2 || '',
+          dataInicio: base.dataInicio || '',
+          pinCode: base.pinCode || '1234',
+        });
+      }
+      carregarFresco();
     }
   }, [isOpen, settings]);
 
@@ -59,29 +71,38 @@ export default function CoupleSettingsModal({ isOpen, onClose, settings, onSetti
 
     setSalvandoFoto(true);
     try {
-      toast.show('Comprimindo foto de perfil...');
+      toast.show('Comprimindo foto...');
       const compressed = await compressImage(file, 800, 0.85);
 
-      toast.show('Enviando foto para a nuvem...');
+      toast.show('Enviando para a nuvem...');
       const fotoUrl = await uploadImagemMemoria(compressed);
 
-      const novoState = {
-        ...formData,
-        [parceiro === 'p1' ? 'foto1' : 'foto2']: fotoUrl,
-      };
+      // Atualização atômica que nunca sobrescreve a foto do outro parceiro
+      const nuvemAtualizada = await atualizarFotoPerfilNuvem(parceiro, fotoUrl);
 
-      setFormData(novoState);
-      saveCoupleSettings(novoState);
-      await salvarConfiguracoesCasalNuvem(novoState);
-      onSettingsUpdated(novoState);
+      setFormData(nuvemAtualizada);
+      saveCoupleSettings(nuvemAtualizada);
+      onSettingsUpdated(nuvemAtualizada);
 
-      toast.love('Foto salva na nuvem com sucesso! 📸💜');
+      toast.love('Foto de perfil salva e sincronizada em todos os aparelhos! 📸💜');
     } catch (err) {
       console.error(err);
       toast.error('Erro ao enviar foto. Tente novamente!');
     } finally {
       setSalvandoFoto(false);
       e.target.value = '';
+    }
+  }
+
+  async function handleRemoverFoto(parceiro) {
+    try {
+      const nuvemAtualizada = await atualizarFotoPerfilNuvem(parceiro, '');
+      setFormData(nuvemAtualizada);
+      saveCoupleSettings(nuvemAtualizada);
+      onSettingsUpdated(nuvemAtualizada);
+      toast.success('Foto removida.');
+    } catch (err) {
+      console.error(err);
     }
   }
 
@@ -124,10 +145,10 @@ export default function CoupleSettingsModal({ isOpen, onClose, settings, onSetti
 
     setSalvandoTudo(true);
     try {
-      const updated = saveCoupleSettings(formData);
-      await salvarConfiguracoesCasalNuvem(updated);
-      onSettingsUpdated(updated);
-      toast.love('Configurações e fotos salvas na nuvem com sucesso! 💜');
+      const salvo = await salvarConfiguracoesCasalNuvem(formData);
+      saveCoupleSettings(salvo);
+      onSettingsUpdated(salvo);
+      toast.love('Configurações e fotos sincronizadas em todos os aparelhos! 💜');
       onClose();
     } catch (err) {
       console.error('Erro ao salvar:', err);
@@ -181,7 +202,7 @@ export default function CoupleSettingsModal({ isOpen, onClose, settings, onSetti
               {formData.foto1 && (
                 <button
                   type="button"
-                  onClick={() => setFormData((prev) => ({ ...prev, foto1: '' }))}
+                  onClick={() => handleRemoverFoto('p1')}
                   className="btn-brut py-1.5 px-2 bg-pink text-white text-[10px] font-black"
                   title="Remover foto"
                 >
@@ -255,7 +276,7 @@ export default function CoupleSettingsModal({ isOpen, onClose, settings, onSetti
               {formData.foto2 && (
                 <button
                   type="button"
-                  onClick={() => setFormData((prev) => ({ ...prev, foto2: '' }))}
+                  onClick={() => handleRemoverFoto('p2')}
                   className="btn-brut py-1.5 px-2 bg-pink text-white text-[10px] font-black"
                   title="Remover foto"
                 >
@@ -353,7 +374,7 @@ export default function CoupleSettingsModal({ isOpen, onClose, settings, onSetti
             disabled={salvandoFoto || salvandoTudo}
             className="btn-brut flex-1 py-2.5 bg-yellow text-ink text-xs font-black shadow-brut disabled:opacity-50"
           >
-            {salvandoTudo ? 'Gravando em nuvem...' : salvandoFoto ? 'Enviando foto...' : 'Salvar Mudanças 💜'}
+            {salvandoTudo ? 'Sincronizando...' : salvandoFoto ? 'Enviando foto...' : 'Salvar Mudanças 💜'}
           </button>
         </div>
       </form>

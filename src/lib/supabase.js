@@ -14,54 +14,6 @@ export function getTodayDateString() {
 // -------------------------------------------------------------
 // ⚙️ CONFIGURAÇÕES DO CASAL & FOTOS DE PERFIL (PERSISTÊNCIA TOTAL EM NUVEM)
 // -------------------------------------------------------------
-export async function salvarConfiguracoesCasalNuvem(settings) {
-  const payload = {
-    apelido1: settings.apelido1 || 'Jeniffer',
-    emoji1: settings.emoji1 || '🐰',
-    foto1: settings.foto1 || '',
-    apelido2: settings.apelido2 || 'Alvaro',
-    emoji2: settings.emoji2 || '🦊',
-    foto2: settings.foto2 || '',
-    dataInicio: settings.dataInicio || '',
-    pinCode: settings.pinCode || '1234',
-  };
-
-  // 1. Tenta salvar na tabela configuracoes_casal
-  try {
-    await supabase.from('configuracoes_casal').upsert({
-      id: 'casal_principal',
-      apelido1: payload.apelido1,
-      emoji1: payload.emoji1,
-      foto1: payload.foto1,
-      apelido2: payload.apelido2,
-      emoji2: payload.emoji2,
-      foto2: payload.foto2,
-      data_inicio: payload.dataInicio,
-      pin_code: payload.pinCode,
-      atualizado_em: new Date().toISOString(),
-    });
-  } catch (e) {
-    console.warn('configuracoes_casal upsert:', e);
-  }
-
-  // 2. Salva SEMPRE também na tabela memorias como backup infalível
-  try {
-    const jsonDesc = JSON.stringify(payload);
-    // Remove registros antigos de config
-    await supabase.from('memorias').delete().eq('titulo', '__CONFIG_PERFIL__');
-    // Insere o registro de configuração atualizado
-    await supabase.from('memorias').insert({
-      data: getTodayDateString(),
-      titulo: '__CONFIG_PERFIL__',
-      descricao: jsonDesc,
-      foto_url: payload.foto1 || null,
-      link: payload.foto2 || null,
-    });
-  } catch (err) {
-    console.error('Erro no backup de config em memorias:', err);
-  }
-}
-
 export async function buscarConfiguracoesCasalNuvem() {
   // 1. Tenta buscar da tabela configuracoes_casal
   try {
@@ -112,6 +64,78 @@ export async function buscarConfiguracoesCasalNuvem() {
   }
 
   return null;
+}
+
+export async function salvarConfiguracoesCasalNuvem(settings) {
+  // Busca o estado atual mais recente da nuvem para NUNCA perder dados do outro parceiro
+  let atualNuvem = {};
+  try {
+    atualNuvem = (await buscarConfiguracoesCasalNuvem()) || {};
+  } catch {}
+
+  const payload = {
+    apelido1: settings.apelido1 || atualNuvem.apelido1 || 'Jeniffer',
+    emoji1: settings.emoji1 || atualNuvem.emoji1 || '🐰',
+    // Preserva a foto1 se a nova não for enviada vazia intencionalmente
+    foto1: settings.foto1 !== undefined && settings.foto1 !== null
+      ? (settings.foto1 === '__REMOVE__' ? '' : (settings.foto1 || atualNuvem.foto1 || ''))
+      : (atualNuvem.foto1 || ''),
+    apelido2: settings.apelido2 || atualNuvem.apelido2 || 'Alvaro',
+    emoji2: settings.emoji2 || atualNuvem.emoji2 || '🦊',
+    // Preserva a foto2 se a nova não for enviada vazia intencionalmente
+    foto2: settings.foto2 !== undefined && settings.foto2 !== null
+      ? (settings.foto2 === '__REMOVE__' ? '' : (settings.foto2 || atualNuvem.foto2 || ''))
+      : (atualNuvem.foto2 || ''),
+    dataInicio: settings.dataInicio || atualNuvem.dataInicio || '',
+    pinCode: settings.pinCode || atualNuvem.pinCode || '1234',
+  };
+
+  // 1. Tenta salvar na tabela configuracoes_casal
+  try {
+    await supabase.from('configuracoes_casal').upsert({
+      id: 'casal_principal',
+      apelido1: payload.apelido1,
+      emoji1: payload.emoji1,
+      foto1: payload.foto1,
+      apelido2: payload.apelido2,
+      emoji2: payload.emoji2,
+      foto2: payload.foto2,
+      data_inicio: payload.dataInicio,
+      pin_code: payload.pinCode,
+      atualizado_em: new Date().toISOString(),
+    });
+  } catch (e) {
+    console.warn('configuracoes_casal upsert:', e);
+  }
+
+  // 2. Salva SEMPRE também na tabela memorias como backup infalível
+  try {
+    const jsonDesc = JSON.stringify(payload);
+    await supabase.from('memorias').delete().eq('titulo', '__CONFIG_PERFIL__');
+    await supabase.from('memorias').insert({
+      data: getTodayDateString(),
+      titulo: '__CONFIG_PERFIL__',
+      descricao: jsonDesc,
+      foto_url: payload.foto1 || null,
+      link: payload.foto2 || null,
+    });
+  } catch (err) {
+    console.error('Erro no backup de config em memorias:', err);
+  }
+
+  return payload;
+}
+
+export async function atualizarFotoPerfilNuvem(parceiro, fotoUrl) {
+  const isP1 = parceiro === 'p1' || parceiro === 'parceiro1';
+  const atual = (await buscarConfiguracoesCasalNuvem()) || {};
+
+  const novoPayload = {
+    ...atual,
+    [isP1 ? 'foto1' : 'foto2']: fotoUrl || '',
+  };
+
+  return await salvarConfiguracoesCasalNuvem(novoPayload);
 }
 
 // -------------------------------------------------------------
