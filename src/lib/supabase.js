@@ -12,10 +12,38 @@ export function getTodayDateString() {
 }
 
 // -------------------------------------------------------------
-// ⚙️ CONFIGURAÇÕES DO CASAL & FOTOS DE PERFIL (PERSISTÊNCIA TOTAL EM NUVEM)
+// ⚙️ CONFIGURAÇÕES DO CASAL & FOTOS DE PERFIL (TRIPLA PERSISTÊNCIA EM NUVEM)
 // -------------------------------------------------------------
 export async function buscarConfiguracoesCasalNuvem() {
-  // 1. Tenta buscar da tabela configuracoes_casal
+  // 1. Tenta buscar no storage primário garantido (respostas_diarias config_casal)
+  try {
+    const { data: rdData, error: rdError } = await supabase
+      .from('respostas_diarias')
+      .select('*')
+      .eq('parceiro', 'config_casal')
+      .order('criado_em', { ascending: false })
+      .limit(1);
+
+    if (!rdError && rdData && rdData.length > 0 && rdData[0].respostas) {
+      const c = rdData[0].respostas;
+      if (c.foto1 || c.foto2 || c.apelido1) {
+        return {
+          apelido1: c.apelido1 || 'Jeniffer',
+          emoji1: c.emoji1 || '🐰',
+          foto1: c.foto1 || '',
+          apelido2: c.apelido2 || 'Alvaro',
+          emoji2: c.emoji2 || '🦊',
+          foto2: c.foto2 || '',
+          dataInicio: c.dataInicio || '',
+          pinCode: c.pinCode || '1234',
+        };
+      }
+    }
+  } catch (err) {
+    console.warn('config_casal fetch:', err);
+  }
+
+  // 2. Tenta buscar da tabela configuracoes_casal
   try {
     const { data, error } = await supabase
       .from('configuracoes_casal')
@@ -37,7 +65,7 @@ export async function buscarConfiguracoesCasalNuvem() {
     }
   } catch {}
 
-  // 2. Fallback garantido na tabela memorias
+  // 3. Fallback na tabela memorias
   try {
     const { data: memData, error: memError } = await supabase
       .from('memorias')
@@ -59,15 +87,12 @@ export async function buscarConfiguracoesCasalNuvem() {
         pinCode: parsed.pinCode || '1234',
       };
     }
-  } catch (err) {
-    console.error('Erro ao buscar backup de config:', err);
-  }
+  } catch {}
 
   return null;
 }
 
 export async function salvarConfiguracoesCasalNuvem(settings) {
-  // Busca o estado atual mais recente da nuvem para NUNCA perder dados do outro parceiro
   let atualNuvem = {};
   try {
     atualNuvem = (await buscarConfiguracoesCasalNuvem()) || {};
@@ -76,21 +101,32 @@ export async function salvarConfiguracoesCasalNuvem(settings) {
   const payload = {
     apelido1: settings.apelido1 || atualNuvem.apelido1 || 'Jeniffer',
     emoji1: settings.emoji1 || atualNuvem.emoji1 || '🐰',
-    // Preserva a foto1 se a nova não for enviada vazia intencionalmente
     foto1: settings.foto1 !== undefined && settings.foto1 !== null
       ? (settings.foto1 === '__REMOVE__' ? '' : (settings.foto1 || atualNuvem.foto1 || ''))
       : (atualNuvem.foto1 || ''),
     apelido2: settings.apelido2 || atualNuvem.apelido2 || 'Alvaro',
     emoji2: settings.emoji2 || atualNuvem.emoji2 || '🦊',
-    // Preserva a foto2 se a nova não for enviada vazia intencionalmente
     foto2: settings.foto2 !== undefined && settings.foto2 !== null
       ? (settings.foto2 === '__REMOVE__' ? '' : (settings.foto2 || atualNuvem.foto2 || ''))
       : (atualNuvem.foto2 || ''),
     dataInicio: settings.dataInicio || atualNuvem.dataInicio || '',
     pinCode: settings.pinCode || atualNuvem.pinCode || '1234',
+    atualizado_em: new Date().toISOString(),
   };
 
-  // 1. Tenta salvar na tabela configuracoes_casal
+  // 1. Salva no canal garantido respostas_diarias (com parceiro = 'config_casal')
+  try {
+    await supabase.from('respostas_diarias').delete().eq('parceiro', 'config_casal');
+    await supabase.from('respostas_diarias').insert({
+      data: '2099-01-01',
+      parceiro: 'config_casal',
+      respostas: payload,
+    });
+  } catch (err) {
+    console.error('Erro salvando config_casal:', err);
+  }
+
+  // 2. Salva em configuracoes_casal se tabela existir e tiver permissão
   try {
     await supabase.from('configuracoes_casal').upsert({
       id: 'casal_principal',
@@ -102,26 +138,23 @@ export async function salvarConfiguracoesCasalNuvem(settings) {
       foto2: payload.foto2,
       data_inicio: payload.dataInicio,
       pin_code: payload.pinCode,
-      atualizado_em: new Date().toISOString(),
+      atualizado_em: payload.atualizado_em,
     });
   } catch (e) {
     console.warn('configuracoes_casal upsert:', e);
   }
 
-  // 2. Salva SEMPRE também na tabela memorias como backup infalível
+  // 3. Salva em memorias como redundância
   try {
-    const jsonDesc = JSON.stringify(payload);
     await supabase.from('memorias').delete().eq('titulo', '__CONFIG_PERFIL__');
     await supabase.from('memorias').insert({
       data: getTodayDateString(),
       titulo: '__CONFIG_PERFIL__',
-      descricao: jsonDesc,
+      descricao: JSON.stringify(payload),
       foto_url: payload.foto1 || null,
       link: payload.foto2 || null,
     });
-  } catch (err) {
-    console.error('Erro no backup de config em memorias:', err);
-  }
+  } catch {}
 
   return payload;
 }
@@ -139,13 +172,18 @@ export async function atualizarFotoPerfilNuvem(parceiro, fotoUrl) {
 }
 
 // -------------------------------------------------------------
-// TERMÔMETRO / DIÁRIO ÍNTIMO DE HUMOR
+// TERMÔMETRO / DIÁRIO ÍNTIMO DE HUMOR (COM SPOTIFY E YOUTUBE)
 // -------------------------------------------------------------
-export async function salvarRespostaDiaria(parceiro, { nivel, motivo }) {
+export async function salvarRespostaDiaria(parceiro, { nivel, motivo, musica_url = '' }) {
   const { error } = await supabase.from('respostas_diarias').insert({
     data: getTodayDateString(),
     parceiro,
-    respostas: { nivel, motivo, reacoes: {} },
+    respostas: {
+      nivel,
+      motivo,
+      musica_url: musica_url ? musica_url.trim() : '',
+      reacoes: {},
+    },
   });
   if (error) throw error;
 }
@@ -172,10 +210,17 @@ export async function reagirRespostaDiaria(id, parceiro, emoji, respostasAtuais 
   return objReacoes;
 }
 
-export async function editarRespostaDiaria(id, { nivel, motivo, reacoes = {} }) {
+export async function editarRespostaDiaria(id, { nivel, motivo, musica_url = '', reacoes = {} }) {
   const { error } = await supabase
     .from('respostas_diarias')
-    .update({ respostas: { nivel, motivo, reacoes } })
+    .update({
+      respostas: {
+        nivel,
+        motivo,
+        musica_url: musica_url ? musica_url.trim() : '',
+        reacoes,
+      },
+    })
     .eq('id', id);
   if (error) throw error;
 }
@@ -189,6 +234,7 @@ export async function buscarRespostasDiarias(limit = 60) {
   const { data, error } = await supabase
     .from('respostas_diarias')
     .select('*')
+    .neq('parceiro', 'config_casal') // Ignora o registro de configuração do casal
     .order('criado_em', { ascending: false })
     .limit(limit);
   if (error) throw error;
@@ -203,6 +249,7 @@ export async function buscarHistoricoHumor(dias = 30) {
   const { data, error } = await supabase
     .from('respostas_diarias')
     .select('*')
+    .neq('parceiro', 'config_casal')
     .gte('data', dataIso)
     .order('criado_em', { ascending: true });
 
@@ -561,7 +608,7 @@ export async function buscarMemorias() {
   const { data, error } = await supabase
     .from('memorias')
     .select('*')
-    .neq('titulo', '__CONFIG_PERFIL__') // Ignora o registro interno de configurações
+    .neq('titulo', '__CONFIG_PERFIL__')
     .order('data', { ascending: false });
   if (error) throw error;
   return data || [];

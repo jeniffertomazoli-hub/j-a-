@@ -13,6 +13,7 @@ import {
 import { useToast } from '../../context/ToastContext';
 import Modal from '../Modal';
 import Avatar from '../Avatar';
+import MediaEmbed, { detectMediaType } from '../MediaEmbed';
 
 const EMOJIS_REACAO = ['❤️', '😍', '🥺', '😊', '🫂', '🔥', '✨'];
 
@@ -87,6 +88,8 @@ export default function TermometroTab({ quemSouEu, settings, onIrParaFeed }) {
   const [respostas, setRespostas] = useState([]);
   const [nivel, setNivel] = useState(80);
   const [motivo, setMotivo] = useState('');
+  const [musicaUrl, setMusicaUrl] = useState('');
+  const [mostrarInputMusica, setMostrarInputMusica] = useState(false);
 
   // Reação aberta por card
   const [reacaoAbertaId, setReacaoAbertaId] = useState(null);
@@ -97,6 +100,8 @@ export default function TermometroTab({ quemSouEu, settings, onIrParaFeed }) {
     id: null,
     nivel: 80,
     motivo: '',
+    musica_url: '',
+    reacoes: {},
   });
 
   const [deleteModal, setDeleteModal] = useState({
@@ -138,9 +143,15 @@ export default function TermometroTab({ quemSouEu, settings, onIrParaFeed }) {
   async function handleSalvar() {
     setSalvando(true);
     try {
-      await salvarRespostaDiaria(quemSouEu, { nivel, motivo });
+      await salvarRespostaDiaria(quemSouEu, {
+        nivel,
+        motivo,
+        musica_url: musicaUrl,
+      });
       setMotivo('');
-      toast.love('Momento de humor registrado! 💜');
+      setMusicaUrl('');
+      setMostrarInputMusica(false);
+      toast.love('Momento registrado com sucesso! 💜🎵');
       carregar();
     } catch (err) {
       console.error(err);
@@ -179,6 +190,7 @@ export default function TermometroTab({ quemSouEu, settings, onIrParaFeed }) {
       id: item.id,
       nivel: item.respostas?.nivel ?? 80,
       motivo: item.respostas?.motivo ?? '',
+      musica_url: item.respostas?.musica_url ?? '',
       reacoes: item.respostas?.reacoes || {},
     });
   }
@@ -189,10 +201,11 @@ export default function TermometroTab({ quemSouEu, settings, onIrParaFeed }) {
       await editarRespostaDiaria(editModal.id, {
         nivel: editModal.nivel,
         motivo: editModal.motivo,
+        musica_url: editModal.musica_url,
         reacoes: editModal.reacoes || {},
       });
       toast.success('Momento atualizado com sucesso!');
-      setEditModal({ isOpen: false, id: null, nivel: 80, motivo: '' });
+      setEditModal({ isOpen: false, id: null, nivel: 80, motivo: '', musica_url: '', reacoes: {} });
       carregar();
     } catch (err) {
       console.error(err);
@@ -241,7 +254,7 @@ export default function TermometroTab({ quemSouEu, settings, onIrParaFeed }) {
         Como está o coração agora?
       </h1>
       <p className="text-xs text-white/80 font-medium mb-3">
-        Registre seu humor e veja como {outroNome} está se sentindo hoje.
+        Registre seu humor, sentimentos e compartilhe uma música do Spotify ou YouTube.
       </p>
 
       {/* Banner de Atalho para o Feed de Fotos */}
@@ -338,16 +351,60 @@ export default function TermometroTab({ quemSouEu, settings, onIrParaFeed }) {
           className="mt-2 w-full rounded-xl border-3 border-ink px-3 py-2 outline-none bg-white text-xs resize-none font-medium placeholder:text-ink/40"
         />
 
+        {/* Botão para Adicionar Música Spotify / YouTube */}
+        {!mostrarInputMusica && !musicaUrl && (
+          <button
+            type="button"
+            onClick={() => setMostrarInputMusica(true)}
+            className="mt-2 text-[11px] font-black text-ink/70 hover:text-ink flex items-center gap-1.5 py-1 px-2.5 rounded-xl border-2 border-dashed border-ink/40 bg-white/60 hover:bg-white transition"
+          >
+            <span>🎵</span>
+            <span>Adicionar música (Spotify ou YouTube)</span>
+          </button>
+        )}
+
+        {(mostrarInputMusica || musicaUrl) && (
+          <div className="mt-2.5 p-2.5 bg-yellow/20 rounded-xl border-2 border-ink space-y-2 animate-popIn">
+            <div className="flex items-center justify-between">
+              <label className="text-[10px] font-black uppercase text-ink flex items-center gap-1">
+                <span>🎵</span> Link Spotify ou YouTube:
+              </label>
+              <button
+                type="button"
+                onClick={() => {
+                  setMusicaUrl('');
+                  setMostrarInputMusica(false);
+                }}
+                className="text-[10px] font-black text-ink/50 hover:text-pink"
+              >
+                ✕ Cancelar
+              </button>
+            </div>
+            <input
+              type="url"
+              value={musicaUrl}
+              onChange={(e) => setMusicaUrl(e.target.value)}
+              placeholder="Cole o link (Spotify ou YouTube)..."
+              className="w-full rounded-lg border-2 border-ink px-2.5 py-1.5 text-xs font-bold bg-white outline-none placeholder:text-ink/40"
+            />
+            {musicaUrl && (
+              <div className="pt-1">
+                <MediaEmbed url={musicaUrl} compact={true} />
+              </div>
+            )}
+          </div>
+        )}
+
         <button
           onClick={handleSalvar}
           disabled={salvando}
-          className="btn-brut mt-3 w-full py-3 bg-yellow text-ink text-xs font-black disabled:opacity-50 shadow-brut"
+          className="btn-brut mt-3.5 w-full py-3 bg-yellow text-ink text-xs font-black disabled:opacity-50 shadow-brut"
         >
           {salvando ? 'Registrando...' : '💜 Publicar Humor do Momento'}
         </button>
       </div>
 
-      {/* Histórico de Humor com Reações */}
+      {/* Histórico de Humor com Reações e Músicas */}
       <div className="flex items-center justify-between mb-3">
         <h2 className="font-display font-extrabold text-white text-lg flex items-center gap-1.5">
           📊 Histórico de Humor
@@ -357,7 +414,7 @@ export default function TermometroTab({ quemSouEu, settings, onIrParaFeed }) {
         </span>
       </div>
 
-      <div className="space-y-3">
+      <div className="space-y-3.5">
         {respostas.length === 0 ? (
           <div className="card-brut p-6 text-center shadow-brut">
             <p className="text-xs text-ink/60 font-bold">
@@ -375,6 +432,7 @@ export default function TermometroTab({ quemSouEu, settings, onIrParaFeed }) {
             const reacoes = item.respostas?.reacoes || {};
             const minhaReacao = reacoes[quemSouEu];
             const isMenuReacaoOpen = reacaoAbertaId === item.id;
+            const musicaDoMomento = item.respostas?.musica_url;
 
             return (
               <div key={item.id} className="card-brut p-4 shadow-brutsm relative">
@@ -447,6 +505,13 @@ export default function TermometroTab({ quemSouEu, settings, onIrParaFeed }) {
                   </p>
                 )}
 
+                {/* Player Embutido de Música Spotify / YouTube */}
+                {musicaDoMomento && (
+                  <div className="mt-2.5 mb-2">
+                    <MediaEmbed url={musicaDoMomento} compact={false} />
+                  </div>
+                )}
+
                 {/* Badges de Reações com Fotos */}
                 <div className="flex items-center gap-2 flex-wrap mt-2 pt-2 border-t-2 border-ink/10">
                   {reacoes.parceiro1 && (
@@ -514,7 +579,7 @@ export default function TermometroTab({ quemSouEu, settings, onIrParaFeed }) {
       {/* Modal Edição */}
       <Modal
         isOpen={editModal.isOpen}
-        onClose={() => setEditModal({ isOpen: false, id: null, nivel: 80, motivo: '' })}
+        onClose={() => setEditModal({ isOpen: false, id: null, nivel: 80, motivo: '', musica_url: '', reacoes: {} })}
         title="Editar Momento ✏️"
         badgeText="Editar"
         badgeColor="bg-yellow"
@@ -537,10 +602,22 @@ export default function TermometroTab({ quemSouEu, settings, onIrParaFeed }) {
           <textarea
             value={editModal.motivo}
             onChange={(e) => setEditModal((prev) => ({ ...prev, motivo: e.target.value }))}
-            rows={3}
+            rows={2}
             placeholder="Atualize o motivo..."
             className="w-full rounded-xl border-3 border-ink px-3 py-2 text-xs font-medium outline-none bg-white resize-none"
           />
+          <div>
+            <label className="block text-[10px] font-black uppercase text-ink/70 mb-1">
+              Link Spotify ou YouTube:
+            </label>
+            <input
+              type="url"
+              value={editModal.musica_url}
+              onChange={(e) => setEditModal((prev) => ({ ...prev, musica_url: e.target.value }))}
+              placeholder="Cole o link da música ou vídeo..."
+              className="w-full rounded-xl border-2 border-ink px-3 py-1.5 text-xs font-bold bg-white outline-none"
+            />
+          </div>
         </div>
       </Modal>
 
