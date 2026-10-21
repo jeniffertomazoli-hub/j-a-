@@ -47,10 +47,6 @@ export default function Navigation({ tabAtiva, onMudarTab }) {
             >
               <span>{tab.emoji}</span>
               <span>{tab.label}</span>
-              {/* Notificação sutil para Feed e Cartas */}
-              {(tab.id === 'feed' || tab.id === 'cartas') && !isActive && (
-                <span className="w-1.5 h-1.5 rounded-full bg-pink inline-block" />
-              )}
             </button>
           );
         })}
