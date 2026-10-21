@@ -90,6 +90,7 @@ export default function TermometroTab({ quemSouEu, settings, onIrParaFeed }) {
   const [motivo, setMotivo] = useState('');
   const [musicaUrl, setMusicaUrl] = useState('');
   const [mostrarInputMusica, setMostrarInputMusica] = useState(false);
+  const [filtroHumor, setFiltroHumor] = useState('todos');
 
   // Reação aberta por card
   const [reacaoAbertaId, setReacaoAbertaId] = useState(null);
@@ -414,15 +415,50 @@ export default function TermometroTab({ quemSouEu, settings, onIrParaFeed }) {
         </span>
       </div>
 
+      {/* Filtros do Histórico */}
+      <div className="flex gap-1.5 overflow-x-auto scrollbar-none pb-1.5 mb-3">
+        {[
+          { id: 'todos', label: 'Todos' },
+          { id: 'alta', label: '💜 Sintonia 75%+' },
+          { id: 'musica', label: '🎵 Músicas' },
+          { id: 'meus', label: `Só meus (${meuNome})` },
+        ].map((f) => (
+          <button
+            key={f.id}
+            type="button"
+            onClick={() => setFiltroHumor(f.id)}
+            className={`px-3 py-1 rounded-full text-[10px] font-black border-2 border-ink transition whitespace-nowrap shadow-brutsm ${
+              filtroHumor === f.id
+                ? 'bg-yellow text-ink scale-102 font-black'
+                : 'bg-white text-ink/75 hover:bg-yellow/20'
+            }`}
+          >
+            {f.label}
+          </button>
+        ))}
+      </div>
+
       <div className="space-y-3.5">
-        {respostas.length === 0 ? (
+        {respostas.filter((item) => {
+          if (filtroHumor === 'alta') return (item.respostas?.nivel ?? 0) >= 75;
+          if (filtroHumor === 'musica') return Boolean(item.respostas?.musica_url);
+          if (filtroHumor === 'meus') return item.parceiro === quemSouEu;
+          return true;
+        }).length === 0 ? (
           <div className="card-brut p-6 text-center shadow-brut">
             <p className="text-xs text-ink/60 font-bold">
-              Nenhum momento registrado ainda. Registre seu humor acima! ✨
+              Nenhum momento encontrado para este filtro. ✨
             </p>
           </div>
         ) : (
-          respostas.map((item) => {
+          respostas
+            .filter((item) => {
+              if (filtroHumor === 'alta') return (item.respostas?.nivel ?? 0) >= 75;
+              if (filtroHumor === 'musica') return Boolean(item.respostas?.musica_url);
+              if (filtroHumor === 'meus') return item.parceiro === quemSouEu;
+              return true;
+            })
+            .map((item) => {
             const ehParceiro1 = item.parceiro === 'parceiro1';
             const nomeAutor = ehParceiro1 ? settings.apelido1 : settings.apelido2;
             const emojiAutor = ehParceiro1 ? settings.emoji1 : settings.emoji2;

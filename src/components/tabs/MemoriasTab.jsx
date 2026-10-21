@@ -30,6 +30,24 @@ function formatarDataCompleta(dataStr) {
   });
 }
 
+function calcularTempoPassado(dataStr) {
+  if (!dataStr) return '';
+  const partes = dataStr.split('-');
+  if (partes.length < 3) return '';
+  const dataMem = new Date(Number(partes[0]), Number(partes[1]) - 1, Number(partes[2]));
+  const hoje = new Date();
+  hoje.setHours(0, 0, 0, 0);
+
+  const diffDias = Math.floor((hoje - dataMem) / (1000 * 60 * 60 * 24));
+  if (diffDias === 0) return 'Hoje! ✨';
+  if (diffDias === 1) return 'Ontem';
+  if (diffDias < 30) return `Há ${diffDias} dias`;
+  const diffMeses = Math.floor(diffDias / 30);
+  if (diffMeses < 12) return diffMeses === 1 ? 'Há 1 mês' : `Há ${diffMeses} meses`;
+  const diffAnos = Math.floor(diffDias / 365);
+  return diffAnos === 1 ? 'Há 1 ano 💜' : `Há ${diffAnos} anos 💜`;
+}
+
 function isValidHttpUrl(string) {
   try {
     const url = new URL(string);
@@ -48,6 +66,7 @@ export default function MemoriasTab({ quemSouEu, settings }) {
   const [showForm, setShowForm] = useState(false);
   const [salvando, setSalvando] = useState(false);
   const [statusUpload, setStatusUpload] = useState('');
+  const [filtroMarcador, setFiltroMarcador] = useState('Todos');
 
   // Form fields
   const [titulo, setTitulo] = useState('');
@@ -245,16 +264,38 @@ export default function MemoriasTab({ quemSouEu, settings }) {
         </div>
       )}
 
+      {/* Filtros de Marcadores */}
+      <div className="flex gap-1.5 overflow-x-auto scrollbar-none pb-1.5 mb-4">
+        {['Todos', ...MARCADORES].map((m) => (
+          <button
+            key={m}
+            type="button"
+            onClick={() => setFiltroMarcador(m)}
+            className={`px-3 py-1 rounded-full text-[10px] font-black border-2 border-ink transition whitespace-nowrap shadow-brutsm ${
+              filtroMarcador === m
+                ? 'bg-yellow text-ink scale-102 font-black'
+                : 'bg-white text-ink/75 hover:bg-yellow/20'
+            }`}
+          >
+            {m}
+          </button>
+        ))}
+      </div>
+
       {/* Feed de Memórias */}
       <div className="space-y-4">
-        {memorias.length === 0 ? (
+        {memorias.filter((item) => (filtroMarcador === 'Todos' ? true : item.marcador === filtroMarcador)).length === 0 ? (
           <div className="card-brut p-8 text-center">
             <p className="text-xs text-ink/60 font-bold">
-              Nenhuma memória guardada ainda. Registre a primeira foto ou história! 📸
+              {filtroMarcador === 'Todos'
+                ? 'Nenhuma memória guardada ainda. Registre a primeira foto ou história! 📸'
+                : `Nenhuma memória com o marcador "${filtroMarcador}".`}
             </p>
           </div>
         ) : (
-          memorias.map((item) => (
+          memorias
+            .filter((item) => (filtroMarcador === 'Todos' ? true : item.marcador === filtroMarcador))
+            .map((item) => (
             <div
               key={item.id}
               className="card-brut p-4 relative overflow-hidden shadow-brut"
@@ -281,10 +322,15 @@ export default function MemoriasTab({ quemSouEu, settings }) {
                 </div>
               )}
 
-              <div className="flex items-center gap-2 mb-2">
+              <div className="flex items-center gap-1.5 flex-wrap mb-2">
                 <span className="badge-brut bg-purple text-ink text-[9px]">
                   {formatarDataCompleta(item.data)} · {item.marcador}
                 </span>
+                {calcularTempoPassado(item.data) && (
+                  <span className="badge-brut bg-yellow text-ink text-[9px]">
+                    ⏳ {calcularTempoPassado(item.data)}
+                  </span>
+                )}
               </div>
 
               <h3 className="font-display text-lg font-bold text-ink pr-6 leading-snug">

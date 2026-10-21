@@ -363,13 +363,13 @@ export default function TopicosTab({ quemSouEu, settings }) {
           {!euRespondiPergunta ? (
             <button
               onClick={handleMarcarPerguntaRespondida}
-              className="btn-brut px-3 py-1.5 bg-yellow text-ink text-[10px] font-black shadow-brutsm"
+              className="btn-brut px-3 py-1.5 bg-yellow text-ink text-[10px] font-black shadow-brutsm hover:scale-102 active:scale-95 transition"
             >
               Já conversamos! ✅
             </button>
           ) : (
-            <span className="text-[10px] font-black text-ink/60">
-              {ambosBatem ? 'Conexão do dia! 💜' : 'Aguardando o outro confirmar...'}
+            <span className="badge-brut bg-white text-ink text-[9px] font-black shadow-brutsm">
+              {ambosBatem ? 'Conexão do dia completa! 💜✨' : 'Você confirmou! Falta o outro lado... ⏳'}
             </span>
           )}
         </div>

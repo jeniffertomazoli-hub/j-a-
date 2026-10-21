@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import {
   criarCartaAbraQuando,
   buscarCartas,
+  editarCartaAbraQuando,
   abrirCarta,
   excluirCarta,
   subscribeToTable,
@@ -54,7 +55,13 @@ export default function CartasTab({ quemSouEu, settings }) {
   const [previewFoto, setPreviewFoto] = useState(null);
   const [showSugestoes, setShowSugestoes] = useState(false);
 
-  // Modais
+  // Modais e Prévia
+  const [cartaPrevia, setCartaPrevia] = useState(null);
+  const [cartaParaEditar, setCartaParaEditar] = useState(null);
+  const [editTitulo, setEditTitulo] = useState('');
+  const [editMensagem, setEditMensagem] = useState('');
+  const [salvandoEdicao, setSalvandoEdicao] = useState(false);
+
   const [cartaParaAbrir, setCartaParaAbrir] = useState(null);
   const [cartaRevelada, setCartaRevelada] = useState(null);
   const [deleteModal, setDeleteModal] = useState({ isOpen: false, id: null });
@@ -140,6 +147,34 @@ export default function CartasTab({ quemSouEu, settings }) {
     } catch (err) {
       console.error(err);
       toast.error('Erro ao abrir a carta.');
+    }
+  }
+
+  function handleAbrirEdicao(carta) {
+    setCartaParaEditar(carta);
+    setEditTitulo(carta.titulo || '');
+    setEditMensagem(carta.mensagem || '');
+  }
+
+  async function handleSalvarEdicao() {
+    if (!editTitulo.trim() || !editMensagem.trim()) {
+      toast.error('Preencha o título e a mensagem da carta!');
+      return;
+    }
+    setSalvandoEdicao(true);
+    try {
+      await editarCartaAbraQuando(cartaParaEditar.id, {
+        titulo: editTitulo.trim(),
+        mensagem: editMensagem.trim(),
+      });
+      toast.love('Carta atualizada com amor! 💌');
+      setCartaParaEditar(null);
+      carregar();
+    } catch (err) {
+      console.error(err);
+      toast.error('Erro ao salvar edição da carta.');
+    } finally {
+      setSalvandoEdicao(false);
     }
   }
 
@@ -337,17 +372,34 @@ export default function CartasTab({ quemSouEu, settings }) {
                     </div>
 
                     <div className="flex flex-col gap-1.5 shrink-0">
-                      {!escritaPorMim && (
+                      {escritaPorMim ? (
+                        <>
+                          <button
+                            onClick={() => setCartaPrevia(carta)}
+                            className="btn-brut px-2.5 py-1.5 bg-yellow text-ink text-[10px] font-black shadow-brutsm flex items-center justify-center gap-1 hover:scale-102 transition"
+                            title="Reler o que você escreveu antes de ser aberta"
+                          >
+                            👁️ Reler
+                          </button>
+                          <button
+                            onClick={() => handleAbrirEdicao(carta)}
+                            className="btn-brut px-2.5 py-1 bg-white text-ink text-[10px] font-black shadow-brutsm flex items-center justify-center gap-1 hover:bg-yellow/20 transition"
+                            title="Editar carta antes de ser aberta"
+                          >
+                            ✏️ Editar
+                          </button>
+                        </>
+                      ) : (
                         <button
                           onClick={() => setConfirmarAberturaModal({ isOpen: true, carta })}
-                          className="btn-brut px-3 py-2 bg-yellow text-ink text-[10px] font-black shadow-brutsm"
+                          className="btn-brut px-3 py-2 bg-yellow text-ink text-[10px] font-black shadow-brutsm hover:scale-102 transition"
                         >
                           Abrir 💌
                         </button>
                       )}
                       <button
                         onClick={() => setDeleteModal({ isOpen: true, id: carta.id })}
-                        className="text-ink/30 hover:text-pink text-xs p-1 text-center"
+                        className="text-ink/30 hover:text-pink text-xs p-1 text-center transition"
                         title="Excluir carta"
                       >
                         🗑️
@@ -455,13 +507,61 @@ export default function CartasTab({ quemSouEu, settings }) {
         </p>
       </Modal>
 
-      {/* Modal de Revelação da Carta */}
+      {/* Modal de Revelação da Carta Aberta */}
       <CartaAbertaModal
         carta={cartaRevelada}
         settings={settings}
         nomeQuemAbriu={cartaRevelada?.aberta_por === 'parceiro1' ? settings.apelido1 : settings.apelido2}
+        isPrevia={false}
         onClose={() => setCartaRevelada(null)}
       />
+
+      {/* Modal de Prévia pelo Autor (Antes de ser aberta pelo parceiro) */}
+      <CartaAbertaModal
+        carta={cartaPrevia}
+        settings={settings}
+        nomeQuemAbriu={cartaPrevia?.escrita_por === 'parceiro1' ? settings.apelido1 : settings.apelido2}
+        isPrevia={true}
+        onClose={() => setCartaPrevia(null)}
+      />
+
+      {/* Modal de Edição de Carta pelo Autor */}
+      <Modal
+        isOpen={Boolean(cartaParaEditar)}
+        onClose={() => setCartaParaEditar(null)}
+        title="Editar Carta Secreta ✏️"
+        badgeText="Abra Quando..."
+        badgeColor="bg-yellow"
+        confirmText={salvandoEdicao ? 'Salvando...' : 'Salvar Alterações 💌'}
+        onConfirm={handleSalvarEdicao}
+        confirmColor="bg-yellow"
+      >
+        <div className="space-y-3">
+          <div>
+            <label className="block text-[10px] font-black uppercase text-ink/70 mb-1">
+              Título da Carta:
+            </label>
+            <input
+              value={editTitulo}
+              onChange={(e) => setEditTitulo(e.target.value)}
+              className="w-full rounded-xl border-3 border-ink px-3 py-2 outline-none bg-white text-xs font-bold"
+              placeholder="Ex: Abra quando..."
+            />
+          </div>
+          <div>
+            <label className="block text-[10px] font-black uppercase text-ink/70 mb-1">
+              Mensagem com carinho:
+            </label>
+            <textarea
+              value={editMensagem}
+              onChange={(e) => setEditMensagem(e.target.value)}
+              rows={6}
+              className="w-full rounded-xl border-3 border-ink px-3 py-2 outline-none bg-white text-xs font-medium resize-none"
+              placeholder="Sua mensagem sincera..."
+            />
+          </div>
+        </div>
+      </Modal>
 
       {/* Modal de Exclusão */}
       <Modal

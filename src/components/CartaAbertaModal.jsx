@@ -12,11 +12,11 @@ function formatDataHora(iso) {
   });
 }
 
-export default function CartaAbertaModal({ carta, settings, nomeQuemAbriu, onClose }) {
+export default function CartaAbertaModal({ carta, settings, nomeQuemAbriu, onClose, isPrevia = false }) {
   useEffect(() => {
-    if (!carta) return;
+    if (!carta || isPrevia) return;
 
-    // Confetes românticos ao abrir a carta
+    // Confetes românticos ao abrir a carta (apenas quando for revelada de verdade)
     const timeout = setTimeout(() => {
       confetti({
         particleCount: 120,
@@ -28,7 +28,7 @@ export default function CartaAbertaModal({ carta, settings, nomeQuemAbriu, onClo
     }, 250);
 
     return () => clearTimeout(timeout);
-  }, [carta]);
+  }, [carta, isPrevia]);
 
   useEffect(() => {
     function handleKey(e) {
@@ -50,9 +50,11 @@ export default function CartaAbertaModal({ carta, settings, nomeQuemAbriu, onClo
       <div className="w-full max-w-lg max-h-[90vh] flex flex-col animate-popIn">
         {/* Envelope topo decorativo */}
         <div className="text-center mb-2 shrink-0">
-          <span className="text-4xl sm:text-5xl animate-bounceShort inline-block select-none">💌</span>
+          <span className="text-4xl sm:text-5xl animate-bounceShort inline-block select-none">
+            {isPrevia ? '👁️' : '💌'}
+          </span>
           <p className="text-[11px] font-black text-yellow uppercase tracking-widest mt-0.5">
-            Carta Aberta com Amor
+            {isPrevia ? 'Prévia da sua Carta Secreta' : 'Carta Aberta com Amor'}
           </p>
         </div>
 
@@ -63,9 +65,16 @@ export default function CartaAbertaModal({ carta, settings, nomeQuemAbriu, onClo
 
           {/* Cabeçalho da Carta (Fixo no topo da carta) */}
           <div className="p-4 sm:p-5 pb-3 border-b-2 border-ink/10 shrink-0 bg-white">
-            <span className="badge-brut bg-pink text-ink text-[10px] sm:text-xs mb-2 inline-block">
-              "{carta.titulo}"
-            </span>
+            <div className="flex items-center gap-2 flex-wrap mb-2">
+              <span className="badge-brut bg-pink text-ink text-[10px] sm:text-xs inline-block">
+                "{carta.titulo}"
+              </span>
+              {isPrevia && (
+                <span className="badge-brut bg-yellow text-ink text-[9px] sm:text-[10px]">
+                  🔒 Trancada para o parceiro
+                </span>
+              )}
+            </div>
 
             <div className="flex items-center justify-between gap-2 flex-wrap">
               <div className="flex items-center gap-2">
@@ -78,7 +87,7 @@ export default function CartaAbertaModal({ carta, settings, nomeQuemAbriu, onClo
                 />
                 <div className="min-w-0">
                   <p className="text-xs sm:text-sm font-black text-ink leading-tight">
-                    De: {nomeEscritor}
+                    {isPrevia ? `Escrita por você (${nomeEscritor})` : `De: ${nomeEscritor}`}
                   </p>
                   <p className="text-[10px] text-ink/50 font-bold">
                     Escrita em {formatDataHora(carta.criado_em)}
@@ -86,7 +95,7 @@ export default function CartaAbertaModal({ carta, settings, nomeQuemAbriu, onClo
                 </div>
               </div>
 
-              {carta.aberta_em && (
+              {!isPrevia && carta.aberta_em && (
                 <span className="badge-brut bg-cyan text-ink text-[9px] sm:text-[10px] py-0.5 px-2">
                   Aberta por {nomeQuemAbriu} 💜
                 </span>
@@ -121,7 +130,7 @@ export default function CartaAbertaModal({ carta, settings, nomeQuemAbriu, onClo
               onClick={onClose}
               className="btn-brut w-full py-3 bg-yellow text-ink text-xs sm:text-sm font-black shadow-brut hover:scale-101 active:scale-98 transition"
             >
-              Guardar carta no coração ✨💜
+              {isPrevia ? 'Voltar às cartas ✨' : 'Guardar carta no coração ✨💜'}
             </button>
           </div>
         </div>

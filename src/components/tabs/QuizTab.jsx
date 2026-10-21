@@ -70,6 +70,22 @@ export default function QuizTab({ quemSouEu, settings }) {
     );
   }
 
+  const perguntasAmbosResponderam = perguntas.filter((p) => {
+    const r1 = respostas.find((r) => r.pergunta_id === p.id && r.parceiro === 'parceiro1');
+    const r2 = respostas.find((r) => r.pergunta_id === p.id && r.parceiro === 'parceiro2');
+    return r1 && r2;
+  });
+
+  const matchesAmbos = perguntasAmbosResponderam.filter((p) => {
+    const r1 = respostas.find((r) => r.pergunta_id === p.id && r.parceiro === 'parceiro1');
+    const r2 = respostas.find((r) => r.pergunta_id === p.id && r.parceiro === 'parceiro2');
+    return r1.resposta === r2.resposta;
+  });
+
+  const percentualAfinidade = perguntasAmbosResponderam.length > 0
+    ? Math.round((matchesAmbos.length / perguntasAmbosResponderam.length) * 100)
+    : null;
+
   return modoGerenciar ? (
     <GerenciarPerguntasView
       perguntas={perguntas}
@@ -93,9 +109,29 @@ export default function QuizTab({ quemSouEu, settings }) {
       <h1 className="font-display text-2xl sm:text-3xl font-extrabold text-white mb-1">
         Quiz de Compatibilidade
       </h1>
-      <p className="text-xs text-white/80 font-medium mb-5">
+      <p className="text-xs text-white/80 font-medium mb-4">
         Responda às perguntas para ver se vocês pensam igual! 💙
       </p>
+
+      {/* Placar Geral de Afinidade no Quiz */}
+      {percentualAfinidade !== null && (
+        <div className="card-brut bg-cyan p-4 mb-5 shadow-brut animate-popIn">
+          <div className="flex items-center justify-between gap-2 flex-wrap mb-1.5">
+            <span className="badge-brut bg-white text-ink text-[10px] font-black">
+              🏆 Placar Geral de Sintonia
+            </span>
+            <span className="badge-brut bg-yellow text-ink text-[10px] font-black">
+              {percentualAfinidade}% de Combinação!
+            </span>
+          </div>
+          <p className="text-xs font-bold text-ink/90 leading-relaxed">
+            Vocês concordaram na mesma resposta em{' '}
+            <strong className="font-black text-ink">{matchesAmbos.length}</strong> de{' '}
+            <strong className="font-black text-ink">{perguntasAmbosResponderam.length}</strong>{' '}
+            {perguntasAmbosResponderam.length === 1 ? 'pergunta respondida' : 'perguntas respondidas por ambos'}! 💙✨
+          </p>
+        </div>
+      )}
 
       {perguntas.length === 0 ? (
         <div className="card-brut p-6 text-center">

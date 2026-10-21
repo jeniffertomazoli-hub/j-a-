@@ -415,6 +415,11 @@ export default function FeedTab({ quemSouEu, settings }) {
                         <span className={`badge-brut ${corBadge} text-[8px] py-0 px-1.5`}>
                           {ehAutorP1 ? 'Jeniffer' : 'Alvaro'}
                         </span>
+                        {reacoes.parceiro1 && reacoes.parceiro2 && (
+                          <span className="badge-brut bg-purple text-ink text-[8px] py-0 px-1.5">
+                            💜 Sintonia!
+                          </span>
+                        )}
                       </div>
                       <p className="text-[10px] text-ink/50 font-bold">
                         {formatarDataPost(post.criado_em)}
@@ -652,13 +657,21 @@ export default function FeedTab({ quemSouEu, settings }) {
       {imagemCheia && (
         <div
           onClick={() => setImagemCheia(null)}
-          className="fixed inset-0 z-50 bg-ink/85 flex items-center justify-center p-4 cursor-pointer animate-fadeIn"
+          className="fixed inset-0 z-50 bg-ink/90 backdrop-blur-sm flex flex-col items-center justify-center p-3 sm:p-5 cursor-pointer animate-fadeIn"
         >
-          <img
-            src={imagemCheia}
-            alt="Foto ampliada"
-            className="rounded-2xl border-3 border-ink shadow-brut max-h-[88vh] max-w-full object-contain"
-          />
+          <div className="relative max-h-[90vh] max-w-full flex flex-col items-center" onClick={(e) => e.stopPropagation()}>
+            <button
+              onClick={() => setImagemCheia(null)}
+              className="btn-brut px-3 py-1 bg-yellow text-ink text-xs font-black mb-2 self-end shadow-brut hover:scale-102 transition"
+            >
+              ✕ Fechar Foto
+            </button>
+            <img
+              src={imagemCheia}
+              alt="Foto ampliada"
+              className="rounded-2xl border-3 border-ink shadow-brut max-h-[82vh] max-w-full object-contain bg-black"
+            />
+          </div>
         </div>
       )}
 

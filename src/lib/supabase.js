@@ -642,6 +642,19 @@ export async function buscarCartas() {
   return data || [];
 }
 
+export async function editarCartaAbraQuando(id, { titulo, mensagem, foto_url }) {
+  const payload = { titulo, mensagem };
+  if (foto_url !== undefined) payload.foto_url = foto_url;
+  const { data, error } = await supabase
+    .from('cartas_abra_quando')
+    .update(payload)
+    .eq('id', id)
+    .select()
+    .single();
+  if (error) throw error;
+  return data;
+}
+
 export async function abrirCarta(id, aberta_por) {
   const { data, error } = await supabase
     .from('cartas_abra_quando')
