@@ -11,6 +11,7 @@ import {
 import { useToast } from '../context/ToastContext';
 import Avatar from './Avatar';
 import InstallPwaModal from './InstallPwaModal';
+import NotificationModal from './NotificationModal';
 
 export default function Header({
   nomeEu,
@@ -24,6 +25,9 @@ export default function Header({
   const timeTogether = calculateDaysTogether(settings?.dataInicio);
   const [notifPermission, setNotifPermission] = useState(getNotificationPermission());
   const [isInstallOpen, setIsInstallOpen] = useState(false);
+  const [isNotifModalOpen, setIsNotifModalOpen] = useState(false);
+
+  const quemSouEu = nomeEu === (settings?.apelido1 || 'Jeniffer') ? 'parceiro1' : 'parceiro2';
 
   useEffect(() => {
     setNotifPermission(getNotificationPermission());
@@ -109,7 +113,7 @@ export default function Header({
 
           {/* Botão Notificações */}
           <button
-            onClick={handleToggleNotifications}
+            onClick={() => setIsNotifModalOpen(true)}
             className={`w-8 h-8 rounded-full border-3 border-ink flex items-center justify-center text-xs sm:text-sm shadow-brutsm transition active:scale-95 ${
               notifPermission === 'granted'
                 ? 'bg-yellow text-ink'
@@ -117,12 +121,12 @@ export default function Header({
             }`}
             title={
               notifPermission === 'granted'
-                ? 'Notificações Ativas (toque para testar) 🔔'
+                ? 'Notificações Ativas (toque para testar e gerenciar) 🔔'
                 : notifPermission === 'ios-requires-install'
                 ? 'Instale na Tela de Início para ativar notificações 📲'
                 : notifPermission === 'denied'
-                ? 'Notificações Bloqueadas (toque para ver ajuda) 🔕'
-                : 'Ativar Notificações no Celular'
+                ? 'Notificações Bloqueadas (toque para instruções) 🔕'
+                : 'Ativar Notificações no Celular 🔔'
             }
             aria-label="Notificações"
           >
@@ -166,6 +170,17 @@ export default function Header({
       <InstallPwaModal
         isOpen={isInstallOpen}
         onClose={() => setIsInstallOpen(false)}
+      />
+
+      <NotificationModal
+        isOpen={isNotifModalOpen}
+        onClose={() => {
+          setIsNotifModalOpen(false);
+          setNotifPermission(getNotificationPermission());
+        }}
+        quemSouEu={quemSouEu}
+        settings={settings}
+        onOpenInstallPwa={() => setIsInstallOpen(true)}
       />
     </>
   );

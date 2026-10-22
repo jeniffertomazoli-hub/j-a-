@@ -769,3 +769,43 @@ export function subscribeToTable(table, onPayload) {
     supabase.removeChannel(channel);
   };
 }
+
+// -------------------------------------------------------------
+// NOTIFICAÇÃO DE TESTE E INTERAÇÃO EM TEMPO REAL ENTRE O CASAL
+// -------------------------------------------------------------
+export async function enviarNotificacaoTeste(quemSouEu, meuNome, meuEmoji, outroNome) {
+  // 1. Envia via broadcast em tempo real para disparo imediato (0ms)
+  try {
+    const channel = supabase.channel('canal_sintonia_notificacoes');
+    await channel.send({
+      type: 'broadcast',
+      event: 'notificacao_casal',
+      payload: {
+        remetente: quemSouEu,
+        titulo: `🔔 ${meuEmoji} Notificação de Teste de ${meuNome}!`,
+        corpo: `${meuNome} acabou de testar as notificações com você agora mesmo! 💜`,
+        tag: 'teste-casal',
+      },
+    });
+  } catch (err) {
+    console.warn('Broadcast teste erro:', err);
+  }
+
+  // 2. Persiste em respostas_diarias para garantir acionamento via postgres_changes
+  try {
+    await supabase.from('respostas_diarias').insert({
+      data: '2099-05-05',
+      parceiro: quemSouEu,
+      respostas: {
+        tipo: 'teste_notificacao',
+        remetente: quemSouEu,
+        nome: meuNome,
+        emoji: meuEmoji,
+        mensagem: `${meuNome} acabou de testar as notificações com você! 💜`,
+        timestamp: Date.now(),
+      },
+    });
+  } catch (err) {
+    console.warn('Persist teste erro:', err);
+  }
+}
