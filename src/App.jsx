@@ -22,10 +22,8 @@ import CoupleSettingsModal from './components/CoupleSettingsModal';
 import TermometroTab from './components/tabs/TermometroTab';
 import RadarTab from './components/tabs/RadarTab';
 import FeedTab from './components/tabs/FeedTab';
-import TopicosTab from './components/tabs/TopicosTab';
 import CartasTab from './components/tabs/CartasTab';
 import FilmesTab from './components/tabs/FilmesTab';
-import QuizTab from './components/tabs/QuizTab';
 import MemoriasTab from './components/tabs/MemoriasTab';
 import PainelTab from './components/tabs/PainelTab';
 
@@ -124,17 +122,11 @@ export function AppContent() {
         {tabAtiva === 'feed' && (
           <FeedTab quemSouEu={quemSouEu} settings={settings} />
         )}
-        {tabAtiva === 'topicos' && (
-          <TopicosTab quemSouEu={quemSouEu} settings={settings} />
-        )}
         {tabAtiva === 'cartas' && (
           <CartasTab quemSouEu={quemSouEu} settings={settings} />
         )}
         {tabAtiva === 'filmes' && (
           <FilmesTab quemSouEu={quemSouEu} settings={settings} />
-        )}
-        {tabAtiva === 'quiz' && (
-          <QuizTab quemSouEu={quemSouEu} settings={settings} />
         )}
         {tabAtiva === 'memorias' && (
           <MemoriasTab quemSouEu={quemSouEu} settings={settings} />

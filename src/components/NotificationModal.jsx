@@ -202,13 +202,11 @@ export default function NotificationModal({
           </p>
           <div className="grid grid-cols-2 gap-1.5 text-[10px] font-bold text-ink/80 pt-1">
             <span className="flex items-center gap-1">📸 Foto no Feed</span>
-            <span className="flex items-center gap-1">💬 Recado no Chat</span>
             <span className="flex items-center gap-1">🌡️ Humor no Termômetro</span>
             <span className="flex items-center gap-1">📍 Localização no Radar</span>
             <span className="flex items-center gap-1">💌 Carta Secreta</span>
             <span className="flex items-center gap-1">🎞️ Foto no Álbum</span>
-            <span className="flex items-center gap-1">🎯 Resposta ao Quiz</span>
-            <span className="flex items-center gap-1">✨ Sonho na Lista</span>
+            <span className="flex items-center gap-1">🍿 Filme ou Série</span>
           </div>
         </div>
 

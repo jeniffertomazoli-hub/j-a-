@@ -4,10 +4,8 @@ export const TABS = [
   { id: 'termometro', label: 'Termômetro', emoji: '🌡️' },
   { id: 'radar', label: 'Distância', emoji: '📍' },
   { id: 'feed', label: 'Feed', emoji: '📸' },
-  { id: 'topicos', label: 'Tópicos', emoji: '📋' },
   { id: 'cartas', label: 'Cartas', emoji: '💌' },
   { id: 'filmes', label: 'Filmes', emoji: '🎬' },
-  { id: 'quiz', label: 'Quiz', emoji: '💞' },
   { id: 'memorias', label: 'Memórias', emoji: '✨' },
   { id: 'historico', label: 'Painel', emoji: '📊' },
 ];
