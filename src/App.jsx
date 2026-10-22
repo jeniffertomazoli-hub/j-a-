@@ -20,6 +20,7 @@ import Navigation from './components/Navigation';
 import CoupleSettingsModal from './components/CoupleSettingsModal';
 
 import TermometroTab from './components/tabs/TermometroTab';
+import RadarTab from './components/tabs/RadarTab';
 import FeedTab from './components/tabs/FeedTab';
 import TopicosTab from './components/tabs/TopicosTab';
 import CartasTab from './components/tabs/CartasTab';
@@ -114,7 +115,11 @@ export function AppContent() {
             quemSouEu={quemSouEu}
             settings={settings}
             onIrParaFeed={() => setTabAtiva('feed')}
+            onIrParaRadar={() => setTabAtiva('radar')}
           />
+        )}
+        {tabAtiva === 'radar' && (
+          <RadarTab quemSouEu={quemSouEu} settings={settings} />
         )}
         {tabAtiva === 'feed' && (
           <FeedTab quemSouEu={quemSouEu} settings={settings} />

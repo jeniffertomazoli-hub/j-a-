@@ -72,7 +72,7 @@ function temRespostaValida(item) {
   );
 }
 
-export default function TermometroTab({ quemSouEu, settings, onIrParaFeed }) {
+export default function TermometroTab({ quemSouEu, settings, onIrParaFeed, onIrParaRadar }) {
   const toast = useToast();
   const ehP1 = quemSouEu === 'parceiro1';
   const meuNome = ehP1 ? settings.apelido1 : settings.apelido2;
@@ -257,6 +257,25 @@ export default function TermometroTab({ quemSouEu, settings, onIrParaFeed }) {
       <p className="text-xs text-white/80 font-medium mb-3">
         Registre seu humor, sentimentos e compartilhe uma música do Spotify ou YouTube.
       </p>
+
+      {/* Banner de Atalho para o Radar 360 */}
+      {onIrParaRadar && (
+        <div
+          onClick={onIrParaRadar}
+          className="card-brut p-2.5 mb-2.5 bg-yellow text-ink shadow-brut flex items-center justify-between cursor-pointer hover:scale-101 transition active:scale-98"
+        >
+          <div className="flex items-center gap-2">
+            <span className="text-xl">📍</span>
+            <div>
+              <p className="text-xs font-black">Radar 360 · Distância do Amor</p>
+              <p className="text-[10px] text-ink/75 font-bold">Veja a distância em km e localização ao vivo 🗺️</p>
+            </div>
+          </div>
+          <span className="btn-brut py-1 px-2.5 bg-pink text-ink text-[10px] font-black">
+            Ver Radar →
+          </span>
+        </div>
+      )}
 
       {/* Banner de Atalho para o Feed de Fotos */}
       {onIrParaFeed && (

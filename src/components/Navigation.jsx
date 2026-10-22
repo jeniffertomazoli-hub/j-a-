@@ -2,6 +2,7 @@ import React, { useRef, useEffect } from 'react';
 
 export const TABS = [
   { id: 'termometro', label: 'Termômetro', emoji: '🌡️' },
+  { id: 'radar', label: 'Radar 360', emoji: '📍' },
   { id: 'feed', label: 'Feed', emoji: '📸' },
   { id: 'topicos', label: 'Tópicos', emoji: '📋' },
   { id: 'cartas', label: 'Cartas', emoji: '💌' },

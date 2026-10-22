@@ -235,6 +235,8 @@ export async function buscarRespostasDiarias(limit = 60) {
     .from('respostas_diarias')
     .select('*')
     .neq('parceiro', 'config_casal') // Ignora o registro de configuração do casal
+    .neq('data', '2099-01-01') // Ignora registros de GPS do Radar 360
+    .neq('data', '2099-01-02') // Ignora registros de Abraço Virtual
     .order('criado_em', { ascending: false })
     .limit(limit);
   if (error) throw error;
@@ -250,6 +252,8 @@ export async function buscarHistoricoHumor(dias = 30) {
     .from('respostas_diarias')
     .select('*')
     .neq('parceiro', 'config_casal')
+    .neq('data', '2099-01-01')
+    .neq('data', '2099-01-02')
     .gte('data', dataIso)
     .order('criado_em', { ascending: true });
 
@@ -694,6 +698,102 @@ export async function buscarRespostasPerguntaHoje() {
     .eq('data', data);
   if (error) throw error;
   return res || [];
+}
+
+// -------------------------------------------------------------
+// 🛰️ RADAR 360 & LOCALIZAÇÃO DO CASAL (ESTILO COUPLE 360)
+// -------------------------------------------------------------
+export async function salvarLocalizacaoRadar(parceiro, { latitude, longitude, precisao, bateria, carregando }) {
+  const p = parceiro === 'parceiro2' ? 'parceiro2' : 'parceiro1';
+
+  // Remove o registro anterior de GPS deste parceiro
+  try {
+    await supabase
+      .from('respostas_diarias')
+      .delete()
+      .eq('data', '2099-01-01')
+      .eq('parceiro', p);
+  } catch {}
+
+  const payload = {
+    tipo: 'gps_localizacao',
+    latitude: Number(latitude),
+    longitude: Number(longitude),
+    precisao: precisao ? Number(precisao) : null,
+    bateria: bateria !== undefined && bateria !== null ? Number(bateria) : null,
+    carregando: Boolean(carregando),
+    atualizado_em: new Date().toISOString(),
+  };
+
+  const { error } = await supabase.from('respostas_diarias').insert({
+    data: '2099-01-01',
+    parceiro: p,
+    respostas: payload,
+  });
+
+  if (error) throw error;
+  return payload;
+}
+
+export async function buscarLocalizacoesRadar() {
+  const { data, error } = await supabase
+    .from('respostas_diarias')
+    .select('*')
+    .eq('data', '2099-01-01');
+
+  if (error) throw error;
+
+  const resultado = { parceiro1: null, parceiro2: null };
+  for (const item of (data || [])) {
+    if (item.parceiro === 'parceiro1' && item.respostas?.tipo === 'gps_localizacao') {
+      resultado.parceiro1 = item.respostas;
+    }
+    if (item.parceiro === 'parceiro2' && item.respostas?.tipo === 'gps_localizacao') {
+      resultado.parceiro2 = item.respostas;
+    }
+  }
+  return resultado;
+}
+
+export async function enviarAbracoVirtual(deParceiro, paraParceiro, distanciaKm = null) {
+  const de = deParceiro === 'parceiro2' ? 'parceiro2' : 'parceiro1';
+  const para = paraParceiro === 'parceiro2' ? 'parceiro2' : 'parceiro1';
+
+  try {
+    await supabase.from('respostas_diarias').delete().eq('data', '2099-01-02');
+  } catch {}
+
+  const payload = {
+    tipo: 'abraco_virtual',
+    de,
+    para,
+    distanciaKm: distanciaKm ? Number(distanciaKm) : null,
+    timestamp: Date.now(),
+    enviado_em: new Date().toISOString(),
+  };
+
+  const { error } = await supabase.from('respostas_diarias').insert({
+    data: '2099-01-02',
+    parceiro: de,
+    respostas: payload,
+  });
+
+  if (error) throw error;
+  return payload;
+}
+
+export async function buscarUltimoAbraco() {
+  const { data, error } = await supabase
+    .from('respostas_diarias')
+    .select('*')
+    .eq('data', '2099-01-02')
+    .limit(1);
+
+  if (error) throw error;
+  if (data && data.length > 0 && data[0].respostas?.tipo === 'abraco_virtual') {
+    return data[0].respostas;
+  }
+  return null;
 }
 
 // -------------------------------------------------------------
