@@ -251,9 +251,8 @@ export async function buscarRespostasDiarias(limit = 60) {
   const { data, error } = await supabase
     .from('respostas_diarias')
     .select('*')
-    .neq('parceiro', 'config_casal') // Ignora o registro de configuração do casal
-    .neq('data', '2099-01-01') // Ignora registros de GPS do Radar 360
-    .neq('data', '2099-01-02') // Ignora registros de Abraço Virtual
+    .neq('parceiro', 'config_casal')
+    .not('data', 'like', '2099%')
     .order('criado_em', { ascending: false })
     .limit(limit);
   if (error) throw error;
@@ -269,8 +268,7 @@ export async function buscarHistoricoHumor(dias = 30) {
     .from('respostas_diarias')
     .select('*')
     .neq('parceiro', 'config_casal')
-    .neq('data', '2099-01-01')
-    .neq('data', '2099-01-02')
+    .not('data', 'like', '2099%')
     .gte('data', dataIso)
     .order('criado_em', { ascending: true });
 
@@ -804,6 +802,64 @@ export async function buscarLocalizacoesRadar() {
     }
   }
   return resultado;
+}
+
+export async function salvarRegistroHistoricoDistancia({
+  parceiro,
+  latitude,
+  longitude,
+  endereco,
+  distanciaKm,
+  distanciaFormatada,
+  outroNome,
+}) {
+  try {
+    const payload = {
+      tipo: 'historico_distancia',
+      parceiro,
+      latitude: Number(latitude),
+      longitude: Number(longitude),
+      endereco: endereco || 'Localização obtida via GPS',
+      distancia_km: distanciaKm !== null && distanciaKm !== undefined ? Number(distanciaKm) : null,
+      distancia_formatada: distanciaFormatada || null,
+      outro_nome: outroNome || null,
+      atualizado_em: new Date().toISOString(),
+    };
+
+    const { data, error } = await supabase.from('respostas_diarias').insert({
+      data: '2099-01-03',
+      parceiro,
+      respostas: payload,
+    }).select();
+
+    if (error) throw error;
+    return data;
+  } catch (err) {
+    console.warn('Erro ao salvar no historico de distancias:', err);
+    return null;
+  }
+}
+
+export async function buscarHistoricoDistancias(limit = 40) {
+  try {
+    const { data, error } = await supabase
+      .from('respostas_diarias')
+      .select('*')
+      .eq('data', '2099-01-03')
+      .order('criado_em', { ascending: false })
+      .limit(limit);
+
+    if (error) throw error;
+    return data || [];
+  } catch (err) {
+    console.error('Erro ao buscar histórico de distâncias:', err);
+    return [];
+  }
+}
+
+export async function excluirItemHistoricoDistancia(id) {
+  const { error } = await supabase.from('respostas_diarias').delete().eq('id', id);
+  if (error) throw error;
 }
 
 // -------------------------------------------------------------
