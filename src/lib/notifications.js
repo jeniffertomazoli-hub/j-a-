@@ -1,21 +1,64 @@
 /**
  * Gerenciador de Notificações Web Push & Sistema de Som para o Sintonia
+ * Compatível com iOS (PWA Standalone), Android Chrome e Desktop
  */
 
+export function isIosDevice() {
+  if (typeof window === 'undefined' || !window.navigator) return false;
+  const ua = window.navigator.userAgent.toLowerCase();
+  return /iphone|ipad|ipod/.test(ua);
+}
+
+export function isStandaloneApp() {
+  if (typeof window === 'undefined') return false;
+  return (
+    window.matchMedia('(display-mode: standalone)').matches ||
+    window.navigator.standalone === true
+  );
+}
+
 export function isNotificationSupported() {
-  return typeof window !== 'undefined' && 'Notification' in window;
+  if (typeof window === 'undefined') return false;
+  return 'Notification' in window;
 }
 
 export function getNotificationPermission() {
-  if (!isNotificationSupported()) return 'unsupported';
+  if (typeof window === 'undefined') return 'unsupported';
+  if (isIosDevice() && !isStandaloneApp() && !('Notification' in window)) {
+    return 'ios-requires-install';
+  }
+  if (!isNotificationSupported()) {
+    return 'unsupported';
+  }
   return Notification.permission; // 'default' | 'granted' | 'denied'
 }
 
 export async function requestNotificationPermission() {
+  if (isIosDevice() && !isStandaloneApp() && !('Notification' in window)) {
+    return 'ios-requires-install';
+  }
   if (!isNotificationSupported()) return 'unsupported';
 
   try {
-    const permission = await Notification.requestPermission();
+    // Garante que o Service Worker esteja registrado
+    if ('serviceWorker' in navigator) {
+      try {
+        const existing = await navigator.serviceWorker.getRegistration();
+        if (!existing) {
+          await navigator.serviceWorker.register('/sw.js');
+        }
+      } catch (e) {
+        console.warn('Erro ao pré-registrar service worker:', e);
+      }
+    }
+
+    let permission;
+    const req = Notification.requestPermission();
+    if (req && typeof req.then === 'function') {
+      permission = await req;
+    } else {
+      permission = await new Promise((resolve) => Notification.requestPermission(resolve));
+    }
     return permission;
   } catch (err) {
     console.error('Erro ao pedir permissão de notificação:', err);
@@ -24,7 +67,7 @@ export async function requestNotificationPermission() {
 }
 
 /**
- * Toca um som suave de sino romântico usando Web Audio API (sem precisar de arquivos externos)
+ * Toca um som suave de sino romântico usando Web Audio API
  */
 export function playChimeSound() {
   try {
@@ -70,47 +113,78 @@ export function playChimeSound() {
     osc3.start(now + 0.24);
     osc3.stop(now + 1.5);
   } catch (err) {
-    // Falha silenciosa se áudio não for permitido antes de interação
+    // Silencioso se áudio não for permitido antes de interação
   }
 }
 
 /**
  * Dispara uma notificação nativa do sistema operacional (celular / computador)
+ * Usa /icon-192.png (PNG bitmap compatível com Android & iOS)
  */
-export async function sendAppNotification(title, { body, icon = '/favicon.svg', tag = 'sintonia-notification' } = {}) {
+export async function sendAppNotification(
+  title,
+  { body, icon = '/icon-192.png', badge = '/icon-192.png', tag = 'sintonia-notification' } = {}
+) {
+  if (typeof window === 'undefined') return false;
   if (!isNotificationSupported() || Notification.permission !== 'granted') {
     return false;
   }
 
   playChimeSound();
 
-  try {
-    // Tenta via Service Worker primeiro (ideal para celulares / PWA)
-    if ('serviceWorker' in navigator) {
-      const registration = await navigator.serviceWorker.ready;
-      if (registration && 'showNotification' in registration) {
-        await registration.showNotification(title, {
-          body,
-          icon,
-          badge: icon,
-          tag,
-          vibrate: [200, 100, 200],
-          data: { url: '/' },
+  const notifOptions = {
+    body,
+    icon,
+    badge,
+    tag,
+    vibrate: [200, 100, 200],
+    data: { url: '/' },
+    renotify: true,
+  };
+
+  // 1. Tenta via Service Worker showNotification (Obrigatório no Android Chrome, ideal para PWA)
+  if ('serviceWorker' in navigator) {
+    try {
+      const timeoutPromise = new Promise((resolve) => setTimeout(() => resolve(null), 1500));
+      const reg =
+        (await Promise.race([navigator.serviceWorker.ready, timeoutPromise])) ||
+        (await navigator.serviceWorker.getRegistration());
+
+      if (reg && typeof reg.showNotification === 'function') {
+        await reg.showNotification(title, notifOptions);
+        return true;
+      }
+    } catch (swErr) {
+      console.warn('Falha em registration.showNotification:', swErr);
+    }
+
+    // 2. Mensagem direta para o Service Worker ativo (caso ready tenha demorado)
+    try {
+      if (navigator.serviceWorker.controller) {
+        navigator.serviceWorker.controller.postMessage({
+          type: 'SHOW_NOTIFICATION',
+          title,
+          options: notifOptions,
         });
         return true;
       }
+    } catch (msgErr) {
+      console.warn('Falha ao enviar mensagem de notificação para SW:', msgErr);
     }
+  }
 
-    // Fallback para Notification API padrão
+  // 3. Fallback para Notification API padrão (Desktop / navegadores que suportam construtor)
+  try {
     new Notification(title, {
       body,
       icon,
-      badge: icon,
+      badge,
       tag,
     });
     return true;
   } catch (err) {
-    console.error('Erro ao disparar notificação:', err);
+    // No Android Chrome, 'new Notification()' gera 'TypeError: Illegal constructor'
+    console.warn('Fallback Notification constructor indisponível no aparelho:', err);
     return false;
   }
 }

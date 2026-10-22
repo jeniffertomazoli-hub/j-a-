@@ -10,6 +10,8 @@ import {
   buscarConfiguracoesCasalNuvem,
 } from '../lib/supabase';
 import {
+  isIosDevice,
+  isStandaloneApp,
   isNotificationSupported,
   getNotificationPermission,
   requestNotificationPermission,
@@ -107,13 +109,25 @@ export default function CoupleSettingsModal({ isOpen, onClose, settings, onSetti
   }
 
   async function handleToggleNotifications() {
-    if (!isNotificationSupported()) {
-      toast.error('Seu navegador não suporta notificações.');
+    const currentPerm = getNotificationPermission();
+
+    if (currentPerm === 'ios-requires-install') {
+      toast.info('No iPhone, instale o app na Tela de Início para ativar as notificações! 📲');
       return;
     }
 
-    if (notifPermission === 'granted') {
-      sendAppNotification('🔔 Teste do Sintonia 💜', {
+    if (!isNotificationSupported()) {
+      toast.error('Seu aparelho não suporta notificações de navegador.');
+      return;
+    }
+
+    if (currentPerm === 'denied') {
+      toast.error('Notificações bloqueadas! Toque no cadeado 🔒 ao lado da URL para liberar.');
+      return;
+    }
+
+    if (currentPerm === 'granted') {
+      await sendAppNotification('🔔 Teste do Sintonia 💜', {
         body: 'Notificações estão ativas e funcionando perfeitamente no seu aparelho!',
       });
       toast.love('Notificação de teste enviada! 🔔');
@@ -122,12 +136,14 @@ export default function CoupleSettingsModal({ isOpen, onClose, settings, onSetti
       setNotifPermission(res);
 
       if (res === 'granted') {
-        sendAppNotification('💜 Sintonia Conectada!', {
+        await sendAppNotification('💜 Sintonia Conectada!', {
           body: 'Notificações ativadas! Você receberá avisos quando houver novidades.',
         });
         toast.love('Notificações ativadas com sucesso! 💜');
       } else if (res === 'denied') {
-        toast.error('Permissão negada. Ative as notificações nas configurações do navegador.');
+        toast.error('Notificações bloqueadas! Toque no cadeado 🔒 ao lado da URL para liberar.');
+      } else if (res === 'ios-requires-install') {
+        toast.info('No iPhone, instale o app na Tela de Início para ativar as notificações! 📲');
       }
     }
   }

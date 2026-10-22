@@ -254,47 +254,9 @@ export default function TermometroTab({ quemSouEu, settings, onIrParaFeed, onIrP
       <h1 className="font-display text-2xl sm:text-3xl font-extrabold text-white mb-1 leading-tight">
         Como está o coração agora?
       </h1>
-      <p className="text-xs text-white/80 font-medium mb-3">
+      <p className="text-xs text-white/80 font-medium mb-4">
         Registre seu humor, sentimentos e compartilhe uma música do Spotify ou YouTube.
       </p>
-
-      {/* Banner de Atalho para a Distância do Casal */}
-      {onIrParaRadar && (
-        <div
-          onClick={onIrParaRadar}
-          className="card-brut p-2.5 mb-2.5 bg-yellow text-ink shadow-brut flex items-center justify-between cursor-pointer hover:scale-101 transition active:scale-98"
-        >
-          <div className="flex items-center gap-2">
-            <span className="text-xl">📍</span>
-            <div>
-              <p className="text-xs font-black">Distância entre Nós Dois</p>
-              <p className="text-[10px] text-ink/75 font-bold">Veja a quantos km vocês estão um do outro agora ✨</p>
-            </div>
-          </div>
-          <span className="btn-brut py-1 px-2.5 bg-pink text-ink text-[10px] font-black">
-            Ver Km →
-          </span>
-        </div>
-      )}
-
-      {/* Banner de Atalho para o Feed de Fotos */}
-      {onIrParaFeed && (
-        <div
-          onClick={onIrParaFeed}
-          className="card-brut p-2.5 mb-4 bg-pink text-ink shadow-brut flex items-center justify-between cursor-pointer hover:scale-101 transition active:scale-98"
-        >
-          <div className="flex items-center gap-2">
-            <span className="text-xl">📸</span>
-            <div>
-              <p className="text-xs font-black">Feed de Fotos & Pensamentos</p>
-              <p className="text-[10px] text-ink/75 font-bold">Toque aqui para ver o Feed estilo Instagram 💜</p>
-            </div>
-          </div>
-          <span className="btn-brut py-1 px-2.5 bg-yellow text-ink text-[10px] font-black">
-            Ver Feed →
-          </span>
-        </div>
-      )}
 
       {/* Card Sintonia do Casal */}
       {sintoniaAtual !== null && (

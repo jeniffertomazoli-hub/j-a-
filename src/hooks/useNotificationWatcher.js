@@ -59,12 +59,13 @@ export function useNotificationWatcher(quemSouEu, settings) {
             const titulo = `💬 ${outroEmoji} Recado de ${outroNome}`;
             const msg = msgItem.texto && msgItem.texto !== '📸' ? msgItem.texto : 'Enviou uma nova foto!';
             sendAppNotification(titulo, { body: msg, tag: 'chat-message' });
+            toast.love(titulo);
           }
         }
       )
       .subscribe();
 
-    // Escuta Registro de Humor (Termômetro)
+    // Escuta Registro de Humor (Termômetro) e Radar de Distância
     const humorChannel = supabase
       .channel(`watcher:humor:${Date.now()}`)
       .on(
@@ -73,10 +74,23 @@ export function useNotificationWatcher(quemSouEu, settings) {
         (payload) => {
           const item = payload.new;
           if (item && item.parceiro !== quemSouEu) {
+            // Se for registro de coordenadas do Radar de Distância
+            if (item.data === '2099-01-01') {
+              const titulo = `📍 ${outroEmoji} ${outroNome} atualizou a localização!`;
+              const msg = item.respostas?.endereco
+                ? `Localização: ${item.respostas.endereco}`
+                : 'Abra o Radar para ver a que distância vocês estão 💜';
+              sendAppNotification(titulo, { body: msg, tag: 'radar-localizacao' });
+              toast.love(titulo);
+              return;
+            }
+
+            // Registro de humor do Termômetro
             const nivel = item.respostas?.nivel ?? '';
             const titulo = `🌡️ ${outroEmoji} ${outroNome} atualizou o humor!`;
             const msg = `Nível de felicidade: ${nivel}/100. Veja o que fez seu amor se sentir assim 💜`;
             sendAppNotification(titulo, { body: msg, tag: 'termometro-humor' });
+            toast.love(titulo);
           }
         }
       )

@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { calculateDaysTogether } from '../lib/storage';
 import {
+  isIosDevice,
+  isStandaloneApp,
   isNotificationSupported,
   getNotificationPermission,
   requestNotificationPermission,
@@ -28,27 +30,43 @@ export default function Header({
   }, []);
 
   async function handleToggleNotifications() {
-    if (!isNotificationSupported()) {
-      toast.error('Seu navegador não suporta notificações.');
+    const currentPerm = getNotificationPermission();
+
+    if (currentPerm === 'ios-requires-install') {
+      toast.info('No iPhone, instale o app na Tela de Início para ativar as notificações! 📲');
+      setIsInstallOpen(true);
       return;
     }
 
-    if (notifPermission === 'granted') {
-      sendAppNotification('🔔 Notificações Ativas!', {
-        body: 'Você receberá avisos quando seu amor postar no Feed ou escrever uma carta 💜',
+    if (!isNotificationSupported()) {
+      toast.error('Seu aparelho não suporta notificações de navegador.');
+      return;
+    }
+
+    if (currentPerm === 'denied') {
+      toast.error('Notificações bloqueadas! Toque no cadeado 🔒 ao lado da URL para liberar.');
+      return;
+    }
+
+    if (currentPerm === 'granted') {
+      await sendAppNotification('🔔 Notificações Ativas!', {
+        body: 'Você receberá avisos quando seu amor postar no Feed, atualizar o humor ou escrever uma carta 💜',
       });
-      toast.love('Notificações estão ativas! Enviamos um teste para você 🔔');
+      toast.love('Notificações ativas! Enviamos um aviso de teste no seu celular 🔔');
     } else {
       const res = await requestNotificationPermission();
       setNotifPermission(res);
 
       if (res === 'granted') {
-        sendAppNotification('💜 Sintonia Conectada!', {
+        await sendAppNotification('💜 Sintonia Conectada!', {
           body: 'Prontinho! Você será avisado(a) sempre que tiver novidades do seu amor.',
         });
         toast.love('Notificações ativadas com sucesso! 💜');
       } else if (res === 'denied') {
-        toast.error('Permissão de notificação negada nas configurações do navegador.');
+        toast.error('Notificações bloqueadas! Toque no cadeado 🔒 ao lado da URL para permitir.');
+      } else if (res === 'ios-requires-install') {
+        toast.info('No iPhone, instale o app na Tela de Início para ativar notificações! 📲');
+        setIsInstallOpen(true);
       }
     }
   }
@@ -99,7 +117,11 @@ export default function Header({
             }`}
             title={
               notifPermission === 'granted'
-                ? 'Notificações Ativas (clique para testar)'
+                ? 'Notificações Ativas (toque para testar) 🔔'
+                : notifPermission === 'ios-requires-install'
+                ? 'Instale na Tela de Início para ativar notificações 📲'
+                : notifPermission === 'denied'
+                ? 'Notificações Bloqueadas (toque para ver ajuda) 🔕'
                 : 'Ativar Notificações no Celular'
             }
             aria-label="Notificações"
