@@ -70,6 +70,40 @@ export function formatarDistanciaAmor(km) {
   };
 }
 
+// Obtém o nome da cidade / bairro a partir das coordenadas
+export async function obterNomeLocalizacao(lat, lon) {
+  if (!lat || !lon) return null;
+
+  // 1. Tenta API BigDataCloud (rápida, gratuita, sem chave de API e com suporte a CORS)
+  try {
+    const url = `https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${lat}&longitude=${lon}&localityLanguage=pt`;
+    const res = await fetch(url);
+    if (res.ok) {
+      const data = await res.json();
+      const localidade = data.locality || data.city;
+      const estado = data.principalSubdivision;
+      const partes = [localidade, estado].filter(Boolean);
+      if (partes.length > 0) return partes.join(' - ');
+    }
+  } catch {}
+
+  // 2. Tenta OpenStreetMap Nominatim como fallback
+  try {
+    const url = `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}`;
+    const res = await fetch(url, { headers: { 'User-Agent': 'SintoniaApp' } });
+    if (res.ok) {
+      const data = await res.json();
+      const bairro = data.address?.suburb || data.address?.neighbourhood;
+      const cidade = data.address?.city || data.address?.town || data.address?.municipality;
+      const partes = [bairro, cidade].filter(Boolean);
+      if (partes.length > 0) return partes.join(', ');
+      if (data.display_name) return data.display_name.split(',').slice(0, 3).join(',');
+    }
+  } catch {}
+
+  return `Lat: ${Number(lat).toFixed(4)}, Lon: ${Number(lon).toFixed(4)}`;
+}
+
 // Obtém coordenadas de GPS com fallback multinível (GPS Alta Precisão -> Rede/Wi-Fi -> IP)
 export async function obterLocalizacaoAtual() {
   // 1. Tenta obter pelo GPS de alta precisão do navegador

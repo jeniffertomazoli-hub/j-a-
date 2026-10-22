@@ -703,7 +703,7 @@ export async function buscarRespostasPerguntaHoje() {
 // -------------------------------------------------------------
 // 📍 DISTÂNCIA ENTRE O CASAL (GPS EM KM)
 // -------------------------------------------------------------
-export async function salvarLocalizacaoRadar(parceiro, { latitude, longitude, precisao }) {
+export async function salvarLocalizacaoRadar(parceiro, { latitude, longitude, precisao, endereco }) {
   const p = parceiro === 'parceiro2' ? 'parceiro2' : 'parceiro1';
 
   // Remove o registro anterior de GPS deste parceiro
@@ -720,6 +720,7 @@ export async function salvarLocalizacaoRadar(parceiro, { latitude, longitude, pr
     latitude: Number(latitude),
     longitude: Number(longitude),
     precisao: precisao ? Number(precisao) : null,
+    endereco: endereco || null,
     atualizado_em: new Date().toISOString(),
   };
 

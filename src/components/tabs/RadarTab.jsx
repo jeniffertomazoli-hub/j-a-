@@ -9,6 +9,7 @@ import {
   calcularDistanciaKm,
   formatarDistanciaAmor,
   obterLocalizacaoAtual,
+  obterNomeLocalizacao,
 } from '../../lib/geoUtils';
 import { useToast } from '../../context/ToastContext';
 import Avatar from '../Avatar';
@@ -56,11 +57,13 @@ export default function RadarTab({ quemSouEu, settings }) {
     try {
       toast.show('Buscando sinal de localização...');
       const coords = await obterLocalizacaoAtual();
+      const endereco = await obterNomeLocalizacao(coords.latitude, coords.longitude);
 
       await salvarLocalizacaoRadar(quemSouEu, {
         latitude: coords.latitude,
         longitude: coords.longitude,
         precisao: coords.precisao,
+        endereco,
       });
 
       confetti({
@@ -70,7 +73,7 @@ export default function RadarTab({ quemSouEu, settings }) {
         colors: ['#2F3FE0', '#FFD93D', '#FF4D97'],
       });
 
-      toast.love('Sua localização foi atualizada com sucesso! 📍');
+      toast.love('Sua localização foi atualizada! 📍');
       await carregarLocalizacoes(false);
     } catch (err) {
       console.error(err);
@@ -86,6 +89,9 @@ export default function RadarTab({ quemSouEu, settings }) {
     : null;
 
   const distanciaInfo = formatarDistanciaAmor(distanciaKm);
+
+  const minhaLoc = ehP1 ? locP1 : locP2;
+  const outraLoc = ehP1 ? locP2 : locP1;
 
   return (
     <div className="px-3.5 sm:px-6 pt-4 max-w-md mx-auto pb-14 animate-fadeIn">
@@ -103,17 +109,17 @@ export default function RadarTab({ quemSouEu, settings }) {
         Distância entre nós dois
       </h1>
       <p className="text-xs text-white/80 font-medium mb-4">
-        Veja a quantos quilômetros vocês estão um do outro agora.
+        Veja a quantos quilômetros vocês estão um do outro e onde cada um está.
       </p>
 
       {/* CARD PRINCIPAL DE DISTÂNCIA */}
       <div
-        className={`card-brut p-5 mb-5 shadow-brut relative overflow-hidden transition-all ${
+        className={`card-brut p-5 mb-4 shadow-brut relative overflow-hidden transition-all ${
           distanciaInfo?.ehJuntinho ? 'bg-cyan' : 'bg-white'
         }`}
       >
         {/* Avatares conectados com o Coração */}
-        <div className="flex items-center justify-between gap-3 mb-5">
+        <div className="flex items-center justify-between gap-3 mb-4">
           {/* Avatar Jeniffer */}
           <div className="flex flex-col items-center">
             <Avatar
@@ -182,13 +188,62 @@ export default function RadarTab({ quemSouEu, settings }) {
       <button
         onClick={handleAtualizarMinhaLocalizacao}
         disabled={atualizandoGps}
-        className="btn-brut w-full py-3.5 bg-yellow text-ink text-xs sm:text-sm font-black shadow-brut flex items-center justify-center gap-2 hover:scale-101 active:scale-98 transition disabled:opacity-50"
+        className="btn-brut w-full py-3.5 bg-yellow text-ink text-xs sm:text-sm font-black shadow-brut flex items-center justify-center gap-2 hover:scale-101 active:scale-98 transition disabled:opacity-50 mb-4"
       >
         <span>{atualizandoGps ? '⏳' : '📡'}</span>
         <span>
-          {atualizandoGps ? 'Obtendo GPS...' : 'Atualizar Minha Localização'}
+          {atualizandoGps ? 'Obtendo Localização...' : 'Atualizar Minha Localização'}
         </span>
       </button>
+
+      {/* DETALHES DE ONDE CADA UM ESTÁ (VISUALIZAÇÃO APÓS ATUALIZAR) */}
+      {(minhaLoc || outraLoc) && (
+        <div className="space-y-3 animate-fadeIn">
+          {/* Minha Localização */}
+          {minhaLoc && (
+            <div className="card-brut p-4 bg-white shadow-brutsm">
+              <div className="flex items-center justify-between mb-1.5">
+                <span className="badge-brut bg-yellow text-ink text-[10px] font-black">
+                  📍 Sua Localização Atual ({meuNome})
+                </span>
+                <a
+                  href={`https://www.google.com/maps?q=${minhaLoc.latitude},${minhaLoc.longitude}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="btn-brut px-2.5 py-1 bg-white text-ink text-[10px] font-black shadow-brutsm inline-flex items-center gap-1 hover:bg-yellow transition"
+                >
+                  Abrir no Maps ↗
+                </a>
+              </div>
+              <p className="text-xs font-black text-ink mt-1">
+                {minhaLoc.endereco || `Coordenadas: ${minhaLoc.latitude.toFixed(4)}, ${minhaLoc.longitude.toFixed(4)}`}
+              </p>
+            </div>
+          )}
+
+          {/* Localização do Parceiro */}
+          {outraLoc && (
+            <div className="card-brut p-4 bg-white/95 shadow-brutsm">
+              <div className="flex items-center justify-between mb-1.5">
+                <span className="badge-brut bg-pink text-ink text-[10px] font-black">
+                  📍 Localização de {outroNome}
+                </span>
+                <a
+                  href={`https://www.google.com/maps?q=${outraLoc.latitude},${outraLoc.longitude}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="btn-brut px-2.5 py-1 bg-white text-ink text-[10px] font-black shadow-brutsm inline-flex items-center gap-1 hover:bg-pink transition"
+                >
+                  Abrir no Maps ↗
+                </a>
+              </div>
+              <p className="text-xs font-black text-ink mt-1">
+                {outraLoc.endereco || `Coordenadas: ${outraLoc.latitude.toFixed(4)}, ${outraLoc.longitude.toFixed(4)}`}
+              </p>
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }
