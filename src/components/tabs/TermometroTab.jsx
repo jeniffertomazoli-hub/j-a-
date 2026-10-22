@@ -258,7 +258,7 @@ export default function TermometroTab({ quemSouEu, settings, onIrParaFeed, onIrP
         Registre seu humor, sentimentos e compartilhe uma música do Spotify ou YouTube.
       </p>
 
-      {/* Banner de Atalho para o Radar 360 */}
+      {/* Banner de Atalho para a Distância do Casal */}
       {onIrParaRadar && (
         <div
           onClick={onIrParaRadar}
@@ -267,12 +267,12 @@ export default function TermometroTab({ quemSouEu, settings, onIrParaFeed, onIrP
           <div className="flex items-center gap-2">
             <span className="text-xl">📍</span>
             <div>
-              <p className="text-xs font-black">Radar 360 · Distância do Amor</p>
-              <p className="text-[10px] text-ink/75 font-bold">Veja a distância em km e localização ao vivo 🗺️</p>
+              <p className="text-xs font-black">Distância entre Nós Dois</p>
+              <p className="text-[10px] text-ink/75 font-bold">Veja a quantos km vocês estão um do outro agora ✨</p>
             </div>
           </div>
           <span className="btn-brut py-1 px-2.5 bg-pink text-ink text-[10px] font-black">
-            Ver Radar →
+            Ver Km →
           </span>
         </div>
       )}

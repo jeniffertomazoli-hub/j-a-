@@ -701,9 +701,9 @@ export async function buscarRespostasPerguntaHoje() {
 }
 
 // -------------------------------------------------------------
-// 🛰️ RADAR 360 & LOCALIZAÇÃO DO CASAL (ESTILO COUPLE 360)
+// 📍 DISTÂNCIA ENTRE O CASAL (GPS EM KM)
 // -------------------------------------------------------------
-export async function salvarLocalizacaoRadar(parceiro, { latitude, longitude, precisao, bateria, carregando }) {
+export async function salvarLocalizacaoRadar(parceiro, { latitude, longitude, precisao }) {
   const p = parceiro === 'parceiro2' ? 'parceiro2' : 'parceiro1';
 
   // Remove o registro anterior de GPS deste parceiro
@@ -720,8 +720,6 @@ export async function salvarLocalizacaoRadar(parceiro, { latitude, longitude, pr
     latitude: Number(latitude),
     longitude: Number(longitude),
     precisao: precisao ? Number(precisao) : null,
-    bateria: bateria !== undefined && bateria !== null ? Number(bateria) : null,
-    carregando: Boolean(carregando),
     atualizado_em: new Date().toISOString(),
   };
 
@@ -753,47 +751,6 @@ export async function buscarLocalizacoesRadar() {
     }
   }
   return resultado;
-}
-
-export async function enviarAbracoVirtual(deParceiro, paraParceiro, distanciaKm = null) {
-  const de = deParceiro === 'parceiro2' ? 'parceiro2' : 'parceiro1';
-  const para = paraParceiro === 'parceiro2' ? 'parceiro2' : 'parceiro1';
-
-  try {
-    await supabase.from('respostas_diarias').delete().eq('data', '2099-01-02');
-  } catch {}
-
-  const payload = {
-    tipo: 'abraco_virtual',
-    de,
-    para,
-    distanciaKm: distanciaKm ? Number(distanciaKm) : null,
-    timestamp: Date.now(),
-    enviado_em: new Date().toISOString(),
-  };
-
-  const { error } = await supabase.from('respostas_diarias').insert({
-    data: '2099-01-02',
-    parceiro: de,
-    respostas: payload,
-  });
-
-  if (error) throw error;
-  return payload;
-}
-
-export async function buscarUltimoAbraco() {
-  const { data, error } = await supabase
-    .from('respostas_diarias')
-    .select('*')
-    .eq('data', '2099-01-02')
-    .limit(1);
-
-  if (error) throw error;
-  if (data && data.length > 0 && data[0].respostas?.tipo === 'abraco_virtual') {
-    return data[0].respostas;
-  }
-  return null;
 }
 
 // -------------------------------------------------------------
