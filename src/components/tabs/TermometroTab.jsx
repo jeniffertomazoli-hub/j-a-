@@ -14,6 +14,7 @@ import { useToast } from '../../context/ToastContext';
 import Modal from '../Modal';
 import Avatar from '../Avatar';
 import MediaEmbed, { detectMediaType } from '../MediaEmbed';
+import { sendAppNotification } from '../../lib/notifications';
 
 const EMOJIS_REACAO = ['❤️', '😍', '🥺', '😊', '🫂', '🔥', '✨'];
 
@@ -154,6 +155,12 @@ export default function TermometroTab({ quemSouEu, settings, onIrParaFeed, onIrP
       setMostrarInputMusica(false);
       toast.love('Momento registrado com sucesso! 💜🎵');
       carregar();
+
+      // Confirmação nativa no próprio celular com sino e vibração
+      sendAppNotification('✨ Humor Registrado!', {
+        body: `Seu humor (${nivel}/100) foi salvo e ${outroNome} foi avisado(a)! 💜`,
+        tag: 'humor-proprio',
+      });
     } catch (err) {
       console.error(err);
       toast.error('Não consegui salvar o momento agora. Tente de novo!');

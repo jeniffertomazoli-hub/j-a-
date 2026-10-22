@@ -186,6 +186,23 @@ export async function salvarRespostaDiaria(parceiro, { nivel, motivo, musica_url
     },
   });
   if (error) throw error;
+
+  // Broadcast em tempo real imediato (0ms) para o parceiro
+  try {
+    const channel = supabase.channel('canal_sintonia_notificacoes');
+    await channel.send({
+      type: 'broadcast',
+      event: 'notificacao_casal',
+      payload: {
+        remetente: parceiro,
+        titulo: `🌡️ ${parceiro === 'parceiro1' ? '🐰 Jeniffer' : '🦊 Alvaro'} atualizou o humor!`,
+        corpo: `Nível de felicidade: ${nivel}/100. Veja o que fez seu amor se sentir assim 💜`,
+        tag: 'termometro-humor',
+      },
+    });
+  } catch (bErr) {
+    console.warn('Broadcast humor err:', bErr);
+  }
 }
 
 export async function reagirRespostaDiaria(id, parceiro, emoji, respostasAtuais = {}) {
@@ -301,6 +318,24 @@ export async function criarPostFeed({ parceiro, autor_nome, texto, foto_url }) {
     console.error('Erro ao criar post no feed:', error);
     throw new Error(`Erro no banco: ${error.message || error.details || 'Falha ao salvar post'}`);
   }
+
+  // Broadcast em tempo real imediato para o parceiro
+  try {
+    const channel = supabase.channel('canal_sintonia_notificacoes');
+    await channel.send({
+      type: 'broadcast',
+      event: 'notificacao_casal',
+      payload: {
+        remetente: parceiro,
+        titulo: `📸 ${parceiro === 'parceiro1' ? '🐰' : '🦊'} ${autor_nome || 'Seu amor'} postou no Feed!`,
+        corpo: texto ? `"${texto.slice(0, 70)}..."` : 'Confira a nova foto no Feed do casal! 💜',
+        tag: 'feed-post',
+      },
+    });
+  } catch (bErr) {
+    console.warn('Broadcast feed err:', bErr);
+  }
+
   return data;
 }
 
@@ -449,6 +484,23 @@ export async function enviarMensagemConversa(parceiro, texto, emoji, fotoUrl = n
     foto_url: fotoUrl,
   });
   if (error) throw error;
+
+  // Broadcast em tempo real imediato para o parceiro
+  try {
+    const channel = supabase.channel('canal_sintonia_notificacoes');
+    await channel.send({
+      type: 'broadcast',
+      event: 'notificacao_casal',
+      payload: {
+        remetente: parceiro,
+        titulo: `💬 ${parceiro === 'parceiro1' ? '🐰' : '🦊'} Recado do seu amor!`,
+        corpo: texto && texto !== '📸' ? texto : 'Enviou uma nova foto no chat! 📷',
+        tag: 'chat-message',
+      },
+    });
+  } catch (bErr) {
+    console.warn('Broadcast chat err:', bErr);
+  }
 }
 
 export async function editarMensagemConversa(id, texto) {
