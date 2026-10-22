@@ -54,7 +54,7 @@ export default function RadarTab({ quemSouEu, settings }) {
   async function handleAtualizarMinhaLocalizacao() {
     setAtualizandoGps(true);
     try {
-      toast.info('Buscando seu GPS...');
+      toast.show('Buscando sinal de localização...');
       const coords = await obterLocalizacaoAtual();
 
       await salvarLocalizacaoRadar(quemSouEu, {
@@ -70,11 +70,11 @@ export default function RadarTab({ quemSouEu, settings }) {
         colors: ['#2F3FE0', '#FFD93D', '#FF4D97'],
       });
 
-      toast.love('Sua localização foi atualizada! 📍');
+      toast.love('Sua localização foi atualizada com sucesso! 📍');
       await carregarLocalizacoes(false);
     } catch (err) {
       console.error(err);
-      toast.error(err.message || 'Erro ao obter GPS. Ative a localização no navegador.');
+      toast.error(err.message || 'Erro ao obter GPS. Permita a localização no navegador.');
     } finally {
       setAtualizandoGps(false);
     }

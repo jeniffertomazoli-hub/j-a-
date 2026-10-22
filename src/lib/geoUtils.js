@@ -1,4 +1,4 @@
-// 🛰️ UTILITÁRIOS DE GEOLOCALIZAÇÃO E BATERIA (RADAR 360 DO CASAL)
+// 🛰️ UTILITÁRIOS DE GEOLOCALIZAÇÃO (RADAR DO CASAL)
 
 // Cálculo da distância exata entre duas coordenadas usando a fórmula de Haversine
 export function calcularDistanciaKm(lat1, lon1, lat2, lon2) {
@@ -11,14 +11,23 @@ export function calcularDistanciaKm(lat1, lon1, lat2, lon2) {
     return null;
   }
 
+  const nLat1 = Number(lat1);
+  const nLon1 = Number(lon1);
+  const nLat2 = Number(lat2);
+  const nLon2 = Number(lon2);
+
+  if (Number.isNaN(nLat1) || Number.isNaN(nLon1) || Number.isNaN(nLat2) || Number.isNaN(nLon2)) {
+    return null;
+  }
+
   const R = 6371; // Raio médio da Terra em km
-  const dLat = ((Number(lat2) - Number(lat1)) * Math.PI) / 180;
-  const dLon = ((Number(lon2) - Number(lon1)) * Math.PI) / 180;
+  const dLat = ((nLat2 - nLat1) * Math.PI) / 180;
+  const dLon = ((nLon2 - nLon1) * Math.PI) / 180;
 
   const a =
     Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-    Math.cos((Number(lat1) * Math.PI) / 180) *
-      Math.cos((Number(lat2) * Math.PI) / 180) *
+    Math.cos((nLat1 * Math.PI) / 180) *
+      Math.cos((nLat2 * Math.PI) / 180) *
       Math.sin(dLon / 2) *
       Math.sin(dLon / 2);
 
@@ -61,47 +70,49 @@ export function formatarDistanciaAmor(km) {
   };
 }
 
-// Formatação amigável de tempo decorrido ("há 3 min", "há 1h")
-export function formatarTempoAtras(isoString) {
-  if (!isoString) return 'Não informado';
+// Obtém coordenadas de GPS com fallback multinível (GPS Alta Precisão -> Rede/Wi-Fi -> IP)
+export async function obterLocalizacaoAtual() {
+  // 1. Tenta obter pelo GPS de alta precisão do navegador
   try {
-    const data = new Date(isoString);
-    const agora = new Date();
-    const diffSeg = Math.max(0, Math.floor((agora - data) / 1000));
-
-    if (diffSeg < 60) return 'Agora mesmo';
-    const diffMin = Math.floor(diffSeg / 60);
-    if (diffMin < 60) return `Há ${diffMin} min`;
-    const diffHoras = Math.floor(diffMin / 60);
-    if (diffHoras < 24) return `Há ${diffHoras}h`;
-    const diffDias = Math.floor(diffHoras / 24);
-    return `Há ${diffDias}d`;
-  } catch {
-    return 'Recentemente';
+    const coords = await obterGpsNavegador({ enableHighAccuracy: true, timeout: 6000, maximumAge: 0 });
+    return coords;
+  } catch (errHigh) {
+    console.warn('GPS alta precisão indisponível, tentando baixa precisão (Wi-Fi/Rede):', errHigh);
   }
-}
 
-// Obtém informações da bateria do celular (se o navegador suportar)
-export async function obterBateriaDispositivo() {
-  if (typeof navigator !== 'undefined' && 'getBattery' in navigator) {
-    try {
-      const b = await navigator.getBattery();
-      return {
-        nivel: Math.round(b.level * 100),
-        carregando: Boolean(b.charging),
-      };
-    } catch {
-      return null;
+  // 2. Tenta obter por baixa precisão (Wi-Fi / Torres celulares)
+  try {
+    const coords = await obterGpsNavegador({ enableHighAccuracy: false, timeout: 6000, maximumAge: 60000 });
+    return coords;
+  } catch (errLow) {
+    console.warn('GPS baixa precisão falhou, recorrendo a geolocalização por IP:', errLow);
+  }
+
+  // 3. Fallback infalível por IP da conexão
+  try {
+    const res = await fetch('https://get.geojs.io/v1/ip/geo.json');
+    if (res.ok) {
+      const data = await res.json();
+      if (data.latitude && data.longitude) {
+        return {
+          latitude: parseFloat(data.latitude),
+          longitude: parseFloat(data.longitude),
+          precisao: 1000,
+          origem: 'ip',
+        };
+      }
     }
+  } catch (errIp) {
+    console.warn('Fallback por IP falhou:', errIp);
   }
-  return null;
+
+  throw new Error('Não foi possível obter sua localização. Permita o acesso ao GPS no navegador.');
 }
 
-// Obtém coordenadas de GPS com timeout e precisão
-export function obterLocalizacaoAtual() {
+function obterGpsNavegador(options) {
   return new Promise((resolve, reject) => {
     if (typeof navigator === 'undefined' || !('geolocation' in navigator)) {
-      reject(new Error('Geolocalização não é suportada neste navegador ou aparelho.'));
+      reject(new Error('Navegador sem suporte a GPS.'));
       return;
     }
 
@@ -111,20 +122,13 @@ export function obterLocalizacaoAtual() {
           latitude: pos.coords.latitude,
           longitude: pos.coords.longitude,
           precisao: pos.coords.accuracy,
+          origem: 'gps',
         });
       },
       (err) => {
-        let msg = 'Não foi possível obter sua localização.';
-        if (err.code === 1) msg = 'Permissão de GPS negada. Ative a localização no navegador.';
-        if (err.code === 2) msg = 'Sinal de GPS indisponível no momento.';
-        if (err.code === 3) msg = 'Tempo esgotado ao buscar sinal de GPS.';
-        reject(new Error(msg));
+        reject(err);
       },
-      {
-        enableHighAccuracy: true,
-        timeout: 15000,
-        maximumAge: 10000,
-      }
+      options
     );
   });
 }
