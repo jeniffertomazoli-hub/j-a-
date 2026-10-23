@@ -252,7 +252,7 @@ export async function buscarRespostasDiarias(limit = 60) {
     .from('respostas_diarias')
     .select('*')
     .neq('parceiro', 'config_casal')
-    .not('data', 'like', '2099%')
+    .lt('data', '2099-01-01')
     .order('criado_em', { ascending: false })
     .limit(limit);
   if (error) throw error;
@@ -268,7 +268,7 @@ export async function buscarHistoricoHumor(dias = 30) {
     .from('respostas_diarias')
     .select('*')
     .neq('parceiro', 'config_casal')
-    .not('data', 'like', '2099%')
+    .lt('data', '2099-01-01')
     .gte('data', dataIso)
     .order('criado_em', { ascending: true });
 
