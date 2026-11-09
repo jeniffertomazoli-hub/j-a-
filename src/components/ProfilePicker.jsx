@@ -16,10 +16,14 @@ export default function ProfilePicker({ onEscolher, settings: propsSettings }) {
 
   useEffect(() => {
     async function carregarNuvem() {
-      const nuvem = await buscarConfiguracoesCasalNuvem();
-      if (nuvem && (nuvem.foto1 || nuvem.foto2 || nuvem.apelido1)) {
-        saveCoupleSettings(nuvem);
-        setSettings(nuvem);
+      try {
+        const nuvem = await buscarConfiguracoesCasalNuvem();
+        if (nuvem && (nuvem.foto1 || nuvem.foto2 || nuvem.apelido1 || nuvem.apelido2)) {
+          saveCoupleSettings(nuvem);
+          setSettings(nuvem);
+        }
+      } catch (e) {
+        console.warn('ProfilePicker carregarNuvem:', e);
       }
     }
     carregarNuvem();

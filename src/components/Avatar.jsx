@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 
 const SIZES = {
   xs: 'w-5 h-5 text-[10px]',
@@ -18,6 +18,11 @@ export default function Avatar({
   className = '',
 }) {
   const [imgError, setImgError] = useState(false);
+
+  useEffect(() => {
+    setImgError(false);
+  }, [foto]);
+
   const sizeClass = SIZES[size] || SIZES.md;
 
   if (foto && !imgError) {

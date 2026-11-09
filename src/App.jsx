@@ -10,6 +10,7 @@ import {
   buscarConfiguracoesCasalNuvem,
   salvarConfiguracoesCasalNuvem,
   subscribeToTable,
+  obterCanalBroadcastCasal,
 } from './lib/supabase';
 import { ToastProvider } from './context/ToastContext';
 import { useNotificationWatcher } from './hooks/useNotificationWatcher';
@@ -37,26 +38,44 @@ export function AppContent() {
   // Sincroniza configurações e fotos de perfil em tempo real via nuvem (Supabase)
   useEffect(() => {
     async function carregarSettingsNuvem() {
-      const nuvem = await buscarConfiguracoesCasalNuvem();
-      if (nuvem && (nuvem.foto1 || nuvem.foto2 || nuvem.apelido1)) {
-        saveCoupleSettings(nuvem);
-        setSettings(nuvem);
+      try {
+        const nuvem = await buscarConfiguracoesCasalNuvem();
+        if (nuvem && (nuvem.foto1 || nuvem.foto2 || nuvem.apelido1 || nuvem.apelido2)) {
+          saveCoupleSettings(nuvem);
+          setSettings((prev) => ({ ...prev, ...nuvem }));
+        }
+      } catch (e) {
+        console.warn('Erro ao carregar settings nuvem:', e);
       }
     }
     carregarSettingsNuvem();
 
-    const unsub1 = subscribeToTable('configuracoes_casal', () => {
-      carregarSettingsNuvem();
+    // 1. Canal Broadcast em tempo real para sincronização imediata (0ms) de fotos e dados
+    const canal = obterCanalBroadcastCasal();
+    const subBroadcast = canal.on('broadcast', { event: 'sintonia_notificacao' }, ({ payload }) => {
+      if (payload?.tag === 'config-atualizada' && payload?.payload) {
+        saveCoupleSettings(payload.payload);
+        setSettings((prev) => ({ ...prev, ...payload.payload }));
+      }
     });
-    const unsub2 = subscribeToTable('memorias', (payload) => {
+
+    // 2. Mudanças na tabela memorias
+    const unsubMem = subscribeToTable('memorias', (payload) => {
       if (payload?.new?.titulo === '__CONFIG_PERFIL__' || payload?.eventType === 'INSERT') {
         carregarSettingsNuvem();
       }
     });
 
+    // 3. Mudanças na tabela respostas_diarias
+    const unsubRd = subscribeToTable('respostas_diarias', (payload) => {
+      if (payload?.new?.data === '2099-01-02' || payload?.new?.respostas?.tipo === 'config_casal') {
+        carregarSettingsNuvem();
+      }
+    });
+
     return () => {
-      unsub1();
-      unsub2();
+      unsubMem && unsubMem();
+      unsubRd && unsubRd();
     };
   }, []);
 

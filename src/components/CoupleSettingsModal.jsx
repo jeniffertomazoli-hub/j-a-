@@ -77,7 +77,17 @@ export default function CoupleSettingsModal({ isOpen, onClose, settings, onSetti
       const compressed = await compressImage(file, 800, 0.85);
 
       toast.show('Enviando para a nuvem...');
-      const fotoUrl = await uploadImagemMemoria(compressed);
+      let fotoUrl = '';
+      try {
+        fotoUrl = await uploadImagemMemoria(compressed);
+      } catch (uploadErr) {
+        console.warn('Storage upload error, using fallback:', uploadErr);
+        fotoUrl = await new Promise((resolve) => {
+          const reader = new FileReader();
+          reader.onloadend = () => resolve(reader.result);
+          reader.readAsDataURL(compressed);
+        });
+      }
 
       // Atualização atômica que nunca sobrescreve a foto do outro parceiro
       const nuvemAtualizada = await atualizarFotoPerfilNuvem(parceiro, fotoUrl);
