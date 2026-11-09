@@ -20,6 +20,8 @@ export default function Header({
   onTrocarPerfil,
   onOpenSettings,
   settings,
+  notifsNaoLidas = 0,
+  onLimparNotifsNaoLidas,
 }) {
   const toast = useToast();
   const timeTogether = calculateDaysTogether(settings?.dataInicio);
@@ -113,15 +115,18 @@ export default function Header({
 
           {/* Botão Notificações */}
           <button
-            onClick={() => setIsNotifModalOpen(true)}
-            className={`w-7 h-7 sm:w-8 sm:h-8 rounded-full border-2 sm:border-3 border-ink flex items-center justify-center text-xs sm:text-sm shadow-brutsm transition active:scale-95 ${
+            onClick={() => {
+              setIsNotifModalOpen(true);
+              if (onLimparNotifsNaoLidas) onLimparNotifsNaoLidas();
+            }}
+            className={`relative w-7 h-7 sm:w-8 sm:h-8 rounded-full border-2 sm:border-3 border-ink flex items-center justify-center text-xs sm:text-sm shadow-brutsm transition active:scale-95 ${
               notifPermission === 'granted'
                 ? 'bg-yellow text-ink'
                 : 'bg-white/80 text-ink/70 hover:bg-yellow'
             }`}
             title={
               notifPermission === 'granted'
-                ? 'Notificações Ativas (toque para testar e gerenciar) 🔔'
+                ? 'Notificações Ativas (toque para ver alertas e testar) 🔔'
                 : notifPermission === 'ios-requires-install'
                 ? 'Instale na Tela de Início para ativar notificações 📲'
                 : notifPermission === 'denied'
@@ -131,6 +136,11 @@ export default function Header({
             aria-label="Notificações"
           >
             {notifPermission === 'granted' ? '🔔' : '🔕'}
+            {notifsNaoLidas > 0 && (
+              <span className="absolute -top-1 -right-1 bg-pink text-white text-[9px] font-black w-4 h-4 rounded-full border border-ink flex items-center justify-center animate-bounce">
+                {notifsNaoLidas > 9 ? '9+' : notifsNaoLidas}
+              </span>
+            )}
           </button>
 
           {/* Configurações */}

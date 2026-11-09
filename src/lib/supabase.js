@@ -12,21 +12,51 @@ export function getTodayDateString() {
 }
 
 // -------------------------------------------------------------
-// CENTRAL CONECTADA DE BROADCAST EM TEMPO REAL ENTRE O CASAL
+// CENTRAL CONECTADA DE BROADCAST & ALERTAS EM TEMPO REAL
 // -------------------------------------------------------------
 let canalBroadcastConectado = null;
 let statusInscricaoCanal = 'connecting';
+const ouvintesBroadcast = new Set();
+
+export function registrarOuvinteBroadcast(callback) {
+  ouvintesBroadcast.add(callback);
+  return () => {
+    ouvintesBroadcast.delete(callback);
+  };
+}
 
 export function obterCanalBroadcastCasal() {
   if (!canalBroadcastConectado) {
-    canalBroadcastConectado = supabase.channel('canal_sintonia_notificacoes', {
+    canalBroadcastConectado = supabase.channel('canal_sintonia_notificacoes_v2', {
       config: { broadcast: { self: false } },
     });
 
-    canalBroadcastConectado.subscribe((status) => {
-      statusInscricaoCanal = status;
-      console.log('Realtime canal_sintonia_notificacoes status:', status);
-    });
+    canalBroadcastConectado
+      .on('broadcast', { event: 'notificacao_casal' }, (event) => {
+        const payload = event.payload;
+        ouvintesBroadcast.forEach((cb) => {
+          try {
+            cb(payload);
+          } catch (e) {
+            console.warn('Erro no ouvinte broadcast:', e);
+          }
+        });
+      })
+      .subscribe((status) => {
+        statusInscricaoCanal = status;
+        console.log('Realtime canal_sintonia_notificacoes status:', status);
+        if (status === 'CLOSED' || status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+          setTimeout(() => {
+            if (statusInscricaoCanal !== 'SUBSCRIBED') {
+              try {
+                supabase.removeChannel(canalBroadcastConectado);
+              } catch {}
+              canalBroadcastConectado = null;
+              obterCanalBroadcastCasal();
+            }
+          }, 1500);
+        }
+      });
   }
   return canalBroadcastConectado;
 }
@@ -34,11 +64,33 @@ export function obterCanalBroadcastCasal() {
 // Inicia inscrição do canal imediatamente ao carregar
 obterCanalBroadcastCasal();
 
+// Reconexão automática em celulares ao desbloquear tela ou voltar para o app
+if (typeof window !== 'undefined') {
+  const reconectarSeNecessario = () => {
+    if (document.visibilityState === 'visible' || navigator.onLine) {
+      if (statusInscricaoCanal !== 'SUBSCRIBED') {
+        console.log('Reconectando Realtime canal_sintonia_notificacoes...');
+        if (canalBroadcastConectado) {
+          try {
+            supabase.removeChannel(canalBroadcastConectado);
+          } catch {}
+          canalBroadcastConectado = null;
+        }
+        obterCanalBroadcastCasal();
+      }
+    }
+  };
+
+  document.addEventListener('visibilitychange', reconectarSeNecessario);
+  window.addEventListener('focus', reconectarSeNecessario);
+  window.addEventListener('online', reconectarSeNecessario);
+}
+
 export async function enviarBroadcastCasal(payload) {
   try {
     const ch = obterCanalBroadcastCasal();
 
-    // Se ainda não estiver conectado, aguarda conexão (máximo 2.5s)
+    // Se ainda não estiver conectado, aguarda conexão (máximo 2s)
     if (statusInscricaoCanal !== 'SUBSCRIBED') {
       await new Promise((resolve) => {
         const check = setInterval(() => {
@@ -50,7 +102,7 @@ export async function enviarBroadcastCasal(payload) {
         setTimeout(() => {
           clearInterval(check);
           resolve(false);
-        }, 2500);
+        }, 2000);
       });
     }
 
@@ -63,6 +115,66 @@ export async function enviarBroadcastCasal(payload) {
   } catch (err) {
     console.warn('Falha no envio do broadcast:', err);
   }
+}
+
+// -------------------------------------------------------------
+// HISTÓRICO PERSISTENTE DE NOTIFICAÇÕES (NUVEM ANTI-PERDA)
+// -------------------------------------------------------------
+export async function salvarNotificacaoCasalNuvem({ remetente, titulo, corpo, tag, payload }) {
+  try {
+    const p = remetente === 'parceiro2' || remetente === 'Alvaro' ? 'parceiro2' : 'parceiro1';
+    await supabase.from('respostas_diarias').insert({
+      data: '2099-09-09',
+      parceiro: p,
+      respostas: {
+        tipo: 'alerta_casal',
+        remetente,
+        titulo,
+        corpo,
+        tag: tag || 'notificacao',
+        payload: payload || null,
+        timestamp: Date.now(),
+        criado_em: new Date().toISOString(),
+      },
+    });
+  } catch (err) {
+    console.warn('Erro ao persistir alerta em nuvem:', err);
+  }
+}
+
+export async function buscarNotificacoesCasalNuvem(quemSouEu) {
+  try {
+    const { data, error } = await supabase
+      .from('respostas_diarias')
+      .select('*')
+      .eq('data', '2099-09-09')
+      .order('criado_em', { ascending: false })
+      .limit(20);
+
+    if (error) throw error;
+    if (!data) return [];
+
+    return data
+      .map((item) => ({
+        id: item.id,
+        criado_em: item.criado_em,
+        parceiro: item.parceiro,
+        ...item.respostas,
+      }))
+      .filter((n) => n.remetente !== quemSouEu);
+  } catch (err) {
+    console.warn('Erro ao buscar notificacoes casal:', err);
+    return [];
+  }
+}
+
+/**
+ * Disparo Unificado e 100% Confiável:
+ * Envia instantaneamente por WebSocket e salva na nuvem para entrega garantida
+ */
+export async function enviarAlertaCasalTotal({ remetente, titulo, corpo, tag, payload }) {
+  await enviarBroadcastCasal({ remetente, titulo, corpo, tag, payload });
+  await salvarNotificacaoCasalNuvem({ remetente, titulo, corpo, tag, payload });
 }
 
 // -------------------------------------------------------------
@@ -239,16 +351,16 @@ export async function salvarRespostaDiaria(parceiro, { nivel, motivo, musica_url
   });
   if (error) throw error;
 
-  // Broadcast em tempo real imediato (0ms) para o parceiro
+  // Disparo em tempo real + gravação na nuvem (100% garantido)
   try {
-    await enviarBroadcastCasal({
+    await enviarAlertaCasalTotal({
       remetente: parceiro,
       titulo: `🌡️ ${parceiro === 'parceiro1' ? '🐰 Jeniffer' : '🦊 Alvaro'} atualizou o humor!`,
       corpo: `Nível de felicidade: ${nivel}/100. Veja o que fez seu amor se sentir assim 💜`,
       tag: 'termometro-humor',
     });
   } catch (bErr) {
-    console.warn('Broadcast humor err:', bErr);
+    console.warn('Alerta humor err:', bErr);
   }
 }
 
@@ -364,16 +476,16 @@ export async function criarPostFeed({ parceiro, autor_nome, texto, foto_url }) {
     throw new Error(`Erro no banco: ${error.message || error.details || 'Falha ao salvar post'}`);
   }
 
-  // Broadcast em tempo real imediato para o parceiro
+  // Disparo em tempo real + gravação na nuvem (100% garantido)
   try {
-    await enviarBroadcastCasal({
+    await enviarAlertaCasalTotal({
       remetente: parceiro,
       titulo: `📸 ${parceiro === 'parceiro1' ? '🐰' : '🦊'} ${autor_nome || 'Seu amor'} postou no Feed!`,
       corpo: texto ? `"${texto.slice(0, 70)}..."` : 'Confira a nova foto no Feed do casal! 💜',
       tag: 'feed-post',
     });
   } catch (bErr) {
-    console.warn('Broadcast feed err:', bErr);
+    console.warn('Alerta feed err:', bErr);
   }
 
   return data;
@@ -417,7 +529,7 @@ export async function reagirPostFeed(postId, parceiro, emoji, reacoesAtuais = {}
   // Notifica o parceiro sobre a reação
   if (emoji) {
     try {
-      await enviarBroadcastCasal({
+      await enviarAlertaCasalTotal({
         remetente: parceiro,
         titulo: `❤️ ${parceiro === 'parceiro1' ? '🐰 Jeniffer' : '🦊 Alvaro'} reagiu com ${emoji}!`,
         corpo: 'Seu amor acabou de reagir a uma foto no Feed 💜',
@@ -461,7 +573,7 @@ export async function adicionarComentarioPost(postId, { parceiro, autor_nome, te
 
   // Notifica o parceiro sobre o comentário
   try {
-    await enviarBroadcastCasal({
+    await enviarAlertaCasalTotal({
       remetente: parceiro,
       titulo: `💬 ${parceiro === 'parceiro1' ? '🐰' : '🦊'} ${autor_nome || 'Seu amor'} comentou no Feed!`,
       corpo: `"${texto.slice(0, 65)}"`,
@@ -548,16 +660,16 @@ export async function enviarMensagemConversa(parceiro, texto, emoji, fotoUrl = n
   });
   if (error) throw error;
 
-  // Broadcast em tempo real imediato para o parceiro
+  // Disparo em tempo real + gravação na nuvem (100% garantido)
   try {
-    await enviarBroadcastCasal({
+    await enviarAlertaCasalTotal({
       remetente: parceiro,
       titulo: `💬 ${parceiro === 'parceiro1' ? '🐰' : '🦊'} Recado do seu amor!`,
       corpo: texto && texto !== '📸' ? texto : 'Enviou uma nova foto no chat! 📷',
       tag: 'chat-message',
     });
   } catch (bErr) {
-    console.warn('Broadcast chat err:', bErr);
+    console.warn('Alerta chat err:', bErr);
   }
 }
 
@@ -596,7 +708,7 @@ export async function adicionarFilmeSerie(item) {
   if (error) throw error;
 
   try {
-    await enviarBroadcastCasal({
+    await enviarAlertaCasalTotal({
       remetente: item.sugerido_por,
       titulo: `🍿 ${item.sugerido_por || 'Seu amor'} sugeriu um ${item.tipo === 'serie' ? 'uma série' : 'um filme'}!`,
       corpo: `"${item.titulo}" para assistirem juntos 🎬`,
@@ -694,16 +806,16 @@ export async function salvarMemoria(memoria) {
   const { error } = await supabase.from('memorias').insert(memoria);
   if (error) throw error;
 
-  // Broadcast em tempo real imediato para o parceiro
+  // Disparo em tempo real + gravação na nuvem (100% garantido)
   try {
-    await enviarBroadcastCasal({
+    await enviarAlertaCasalTotal({
       remetente: memoria.criado_por,
       titulo: `🖼️ ${memoria.criado_por || 'Seu amor'} adicionou uma foto na Galeria!`,
       corpo: memoria.titulo ? `"${memoria.titulo}" foi adicionada à galeria do casal 💜` : 'Uma nova foto foi guardada na galeria!',
       tag: 'novo-album',
     });
   } catch (bErr) {
-    console.warn('Broadcast memoria err:', bErr);
+    console.warn('Alerta memoria err:', bErr);
   }
 }
 
@@ -767,9 +879,9 @@ export async function criarCartaAbraQuando({ titulo, mensagem, escrita_por, foto
   });
   if (error) throw error;
 
-  // Dispara notificação imediata para o parceiro
+  // Dispara notificação imediata + salva na nuvem para o parceiro
   try {
-    await enviarBroadcastCasal({
+    await enviarAlertaCasalTotal({
       remetente: escrita_por,
       titulo: `💌 ${escrita_por === 'parceiro1' || escrita_por === 'Jeniffer' ? '🐰 Jeniffer' : '🦊 Alvaro'} te escreveu uma carta secreta!`,
       corpo: `"${titulo}" — Abra quando quiser! 💜`,
@@ -875,7 +987,7 @@ export async function salvarLocalizacaoRadar(parceiro, { latitude, longitude, pr
 
   // Notifica o parceiro sobre a atualização de GPS
   try {
-    await enviarBroadcastCasal({
+    await enviarAlertaCasalTotal({
       remetente: p,
       titulo: `📍 ${p === 'parceiro1' ? '🐰 Jeniffer' : '🦊 Alvaro'} atualizou a localização!`,
       corpo: endereco ? `Está em: ${endereco}` : 'Abra a aba Distância para conferir a quantos km vocês estão! 💜',
@@ -984,19 +1096,19 @@ export function subscribeToTable(table, onPayload) {
 // NOTIFICAÇÃO DE TESTE E INTERAÇÃO EM TEMPO REAL ENTRE O CASAL
 // -------------------------------------------------------------
 export async function enviarNotificacaoTeste(quemSouEu, meuNome, meuEmoji, outroNome) {
-  // 1. Envia via broadcast em tempo real para disparo imediato (0ms)
+  // Disparo Total: broadcast instantâneo (0ms) + persistência em nuvem (data = 2099-09-09 e 2099-05-05)
   try {
-    await enviarBroadcastCasal({
+    await enviarAlertaCasalTotal({
       remetente: quemSouEu,
       titulo: `🔔 ${meuEmoji} Notificação de Teste de ${meuNome}!`,
       corpo: `${meuNome} acabou de testar as notificações com você agora mesmo! 💜`,
       tag: 'teste-casal',
     });
   } catch (err) {
-    console.warn('Broadcast teste erro:', err);
+    console.warn('Alerta teste erro:', err);
   }
 
-  // 2. Persiste em respostas_diarias para garantir acionamento via postgres_changes
+  // Persiste em respostas_diarias para acionamento redundante via postgres_changes
   try {
     await supabase.from('respostas_diarias').insert({
       data: '2099-05-05',

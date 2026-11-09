@@ -34,6 +34,7 @@ export function AppContent() {
   const [tabAtiva, setTabAtiva] = useState('termometro');
   const [settings, setSettings] = useState(getCoupleSettings());
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [notifsNaoLidas, setNotifsNaoLidas] = useState(0);
 
   // Sincroniza configurações e fotos de perfil em tempo real via nuvem (Supabase)
   useEffect(() => {
@@ -80,7 +81,9 @@ export function AppContent() {
   }, []);
 
   // Monitora e dispara notificações em tempo real para ações do parceiro
-  useNotificationWatcher(quemSouEu, settings);
+  useNotificationWatcher(quemSouEu, settings, () => {
+    setNotifsNaoLidas((prev) => prev + 1);
+  });
 
   function handleEscolherPerfil(perfil) {
     setActiveProfile(perfil);
@@ -122,6 +125,8 @@ export function AppContent() {
           onTrocarPerfil={handleTrocarPerfil}
           onOpenSettings={() => setIsSettingsOpen(true)}
           settings={settings}
+          notifsNaoLidas={notifsNaoLidas}
+          onLimparNotifsNaoLidas={() => setNotifsNaoLidas(0)}
         />
         <Navigation tabAtiva={tabAtiva} onMudarTab={setTabAtiva} />
       </header>

@@ -8,8 +8,25 @@ import {
   requestNotificationPermission,
   sendAppNotification,
 } from '../lib/notifications';
-import { enviarNotificacaoTeste } from '../lib/supabase';
+import { enviarNotificacaoTeste, buscarNotificacoesCasalNuvem } from '../lib/supabase';
 import { useToast } from '../context/ToastContext';
+
+function formatarTempoRelativo(isoString) {
+  if (!isoString) return '';
+  try {
+    const data = new Date(isoString);
+    const diffSeg = Math.floor((Date.now() - data.getTime()) / 1000);
+    if (diffSeg < 60) return 'Agora mesmo';
+    const diffMin = Math.floor(diffSeg / 60);
+    if (diffMin < 60) return `Há ${diffMin} min`;
+    const diffHoras = Math.floor(diffMin / 60);
+    if (diffHoras < 24) return `Há ${diffHoras} h`;
+    const diffDias = Math.floor(diffHoras / 24);
+    return `Há ${diffDias} ${diffDias === 1 ? 'dia' : 'dias'}`;
+  } catch {
+    return '';
+  }
+}
 
 export default function NotificationModal({
   isOpen,
@@ -22,6 +39,8 @@ export default function NotificationModal({
   const [permission, setPermission] = useState(getNotificationPermission());
   const [enviandoTesteAmor, setEnviandoTesteAmor] = useState(false);
   const [testandoLocal, setTestandoLocal] = useState(false);
+  const [historicoNotifs, setHistoricoNotifs] = useState([]);
+  const [carregandoHistorico, setCarregandoHistorico] = useState(false);
 
   const ehP1 = quemSouEu === 'parceiro1';
   const meuNome = ehP1 ? settings?.apelido1 || 'Jeniffer' : settings?.apelido2 || 'Alvaro';
@@ -32,8 +51,15 @@ export default function NotificationModal({
   useEffect(() => {
     if (isOpen) {
       setPermission(getNotificationPermission());
+      setCarregandoHistorico(true);
+      buscarNotificacoesCasalNuvem(quemSouEu)
+        .then((res) => setHistoricoNotifs(res || []))
+        .finally(() => setCarregandoHistorico(false));
+
+      // Marca como lidas no celular local
+      localStorage.setItem('sintonia_last_seen_notif', String(Date.now()));
     }
-  }, [isOpen]);
+  }, [isOpen, quemSouEu]);
 
   async function handlePedirPermissao() {
     const res = await requestNotificationPermission();
@@ -84,7 +110,11 @@ export default function NotificationModal({
     setEnviandoTesteAmor(true);
     try {
       await enviarNotificacaoTeste(quemSouEu, meuNome, meuEmoji, outroNome);
-      toast.love(`Notificação de teste enviada para ${outroNome}! 💌 O celular dele(a) vai apitar agora!`);
+      toast.love(`Notificação enviada para ${outroNome}! 💌 O celular dele(a) vai apitar agora!`);
+      // Atualiza lista local
+      setTimeout(() => {
+        buscarNotificacoesCasalNuvem(quemSouEu).then((res) => setHistoricoNotifs(res || []));
+      }, 800);
     } catch (err) {
       console.error(err);
       toast.error('Erro ao enviar sinal para o parceiro.');
@@ -101,7 +131,7 @@ export default function NotificationModal({
       badgeText="Central de Alertas"
       badgeColor="bg-yellow"
     >
-      <div className="space-y-4 py-1 text-ink">
+      <div className="space-y-4 py-1 text-ink max-h-[75vh] overflow-y-auto pr-1">
         {/* Card de Status da Permissão */}
         {permission === 'granted' ? (
           <div className="p-3 bg-green-50 rounded-2xl border-2 border-ink shadow-brutsm space-y-1.5">
@@ -109,17 +139,17 @@ export default function NotificationModal({
               <span className="text-2xl">✅</span>
               <div>
                 <p className="text-xs font-black text-ink">
-                  Permissão Concedida no Navegador
+                  Notificações Ativas e Conectadas
                 </p>
                 <p className="text-[11px] text-ink/75 font-semibold leading-tight">
-                  Seu navegador está autorizado a receber avisos de {outroNome}!
+                  Seu aparelho está autorizado a receber avisos de {outroNome}!
                 </p>
               </div>
             </div>
             <div className="bg-white/80 p-2 rounded-xl border border-ink/20 text-[10px] text-ink/80 space-y-1">
-              <p className="font-bold">⚠️ Dica importante para Celulares (Android & iOS):</p>
-              <p>• <strong>Android:</strong> Se o banner não subir, veja em <em>Configurações do Celular ➔ Aplicativos ➔ Chrome/Samsung Internet ➔ Notificações ➔ Permitir</em>.</p>
-              <p>• <strong>iPhone:</strong> O app precisa estar na <em>Tela de Início</em> para receber notificações pelo sistema da Apple.</p>
+              <p className="font-bold">📱 Como funciona a entrega garantida:</p>
+              <p>• <strong>Em tempo real:</strong> Toca na hora se o app estiver aberto ou em segundo plano.</p>
+              <p>• <strong>Ao desbloquear a tela:</strong> Se o celular estava desligado, o Sintonia recupera os alertas da nuvem automaticamente assim que você abre!</p>
             </div>
           </div>
         ) : permission === 'denied' ? (
@@ -129,10 +159,10 @@ export default function NotificationModal({
               <p className="text-xs font-black text-ink">Notificações Bloqueadas no Celular</p>
             </div>
             <p className="text-[11px] text-ink/80 font-medium leading-relaxed">
-              O navegador bloqueou as notificações. Como o navegador não pergunta de novo automaticamente, siga este passo a passo para destravar:
+              O navegador bloqueou as notificações. Siga este passo a passo para destravar:
             </p>
             <div className="bg-white p-2.5 rounded-xl border-2 border-ink/30 text-[10px] font-bold text-ink/90 space-y-1">
-              <p>1. Toque no ícone de cadeado 🔒 ou de configurações na barra de endereço (ao lado do link do site).</p>
+              <p>1. Toque no ícone de cadeado 🔒 ou opções na barra de endereço (onde fica o link do site).</p>
               <p>2. Toque em <strong>Permissões</strong> ou <strong>Configurações do Site</strong>.</p>
               <p>3. Altere <strong>Notificações</strong> para <strong>Permitir</strong>.</p>
               <p>4. Recarregue a página!</p>
@@ -166,7 +196,7 @@ export default function NotificationModal({
         ) : (
           <div className="p-3 bg-pink/20 rounded-2xl border-2 border-ink shadow-brutsm space-y-2 text-center">
             <p className="text-xs font-black text-ink">
-              Receba avisos quando {outroNome} postar ou registrar algo! 💜
+              Receba avisos sonoros e visuais quando {outroNome} interagir! 💜
             </p>
             <button
               onClick={handlePedirPermissao}
@@ -192,7 +222,7 @@ export default function NotificationModal({
               className="btn-brut w-full py-2.5 bg-cyan text-ink text-xs font-black shadow-brutsm flex items-center justify-center gap-2 hover:bg-cyan/90 transition active:scale-98"
             >
               <span>📱</span>
-              <span>Testar no Meu Celular</span>
+              <span>{testandoLocal ? 'Testando...' : 'Testar no Meu Celular'}</span>
             </button>
 
             {/* Botão Testar no Celular do Parceiro */}
@@ -202,15 +232,76 @@ export default function NotificationModal({
               className="btn-brut w-full py-2.5 bg-yellow text-ink text-xs font-black shadow-brutsm flex items-center justify-center gap-2 hover:bg-yellow/90 transition active:scale-98"
             >
               <span>💌</span>
-              <span>Fazer o Celular do(a) {outroNome} Tocar Agora!</span>
+              <span>{enviandoTesteAmor ? 'Enviando sinal...' : `Fazer o Celular do(a) ${outroNome} Tocar Agora!`}</span>
             </button>
           </div>
           <p className="text-[10px] text-ink/60 font-semibold text-center pt-0.5">
-            Toca o sino musical e vibra o celular do seu parceiro na mesma hora! ✨
+            Toca o sino musical e vibra o celular do seu amor imediatamente! ✨
           </p>
         </div>
 
-        {/* Resumo do que gera notificação */}
+        {/* Histórico Recente de Notificações da Nuvem */}
+        <div className="bg-white rounded-2xl border-2 border-ink p-3 space-y-2 shadow-brutsm">
+          <div className="flex items-center justify-between">
+            <p className="text-[11px] font-black text-ink uppercase tracking-wider flex items-center gap-1">
+              <span>📬</span> Alertas Recentes de {outroNome}:
+            </p>
+            {carregandoHistorico && (
+              <span className="text-[10px] text-ink/60 font-bold animate-pulse">Atualizando...</span>
+            )}
+          </div>
+
+          {historicoNotifs.length > 0 ? (
+            <div className="space-y-2 max-h-48 overflow-y-auto pr-1">
+              {historicoNotifs.map((item, idx) => (
+                <div
+                  key={item.id || idx}
+                  className="p-2.5 rounded-xl border border-ink/20 bg-yellow/10 flex items-start gap-2 text-left"
+                >
+                  <span className="text-base shrink-0 mt-0.5">
+                    {item.tag === 'feed-post'
+                      ? '📸'
+                      : item.tag === 'termometro-humor'
+                      ? '🌡️'
+                      : item.tag === 'carta-secreta'
+                      ? '💌'
+                      : item.tag === 'radar-localizacao'
+                      ? '📍'
+                      : item.tag === 'novo-album'
+                      ? '🖼️'
+                      : item.tag === 'chat-message'
+                      ? '💬'
+                      : '🔔'}
+                  </span>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center justify-between gap-1">
+                      <p className="text-xs font-black text-ink truncate">{item.titulo}</p>
+                      <span className="text-[9px] text-ink/50 font-bold shrink-0">
+                        {formatarTempoRelativo(item.criado_em)}
+                      </span>
+                    </div>
+                    {item.corpo && (
+                      <p className="text-[10px] text-ink/75 font-medium leading-tight mt-0.5">
+                        {item.corpo}
+                      </p>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="text-center py-4 bg-ink/5 rounded-xl border border-ink/10">
+              <span className="text-2xl block mb-1">💌</span>
+              <p className="text-[11px] font-bold text-ink/70">
+                {carregandoHistorico
+                  ? 'Buscando alertas na nuvem...'
+                  : 'Nenhum alerta recente do parceiro no momento.'}
+              </p>
+            </div>
+          )}
+        </div>
+
+        {/* Resumo de Ações */}
         <div className="bg-ink/5 rounded-2xl border-2 border-ink/20 p-3 space-y-1.5">
           <p className="text-[11px] font-black text-ink">
             O que avisa você e seu amor automaticamente?
@@ -220,14 +311,14 @@ export default function NotificationModal({
             <span className="flex items-center gap-1">🌡️ Humor no Termômetro</span>
             <span className="flex items-center gap-1">📍 Localização no Radar</span>
             <span className="flex items-center gap-1">💌 Carta Secreta</span>
-            <span className="flex items-center gap-1">🎞️ Foto no Álbum</span>
+            <span className="flex items-center gap-1">🖼️ Foto na Galeria</span>
             <span className="flex items-center gap-1">🍿 Filme ou Série</span>
           </div>
         </div>
 
         <button
           onClick={onClose}
-          className="btn-brut w-full py-2.5 bg-white text-ink text-xs font-black"
+          className="btn-brut w-full py-2.5 bg-white text-ink text-xs font-black shadow-brutsm"
         >
           Fechar
         </button>
