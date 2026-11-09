@@ -12,6 +12,60 @@ export function getTodayDateString() {
 }
 
 // -------------------------------------------------------------
+// CENTRAL CONECTADA DE BROADCAST EM TEMPO REAL ENTRE O CASAL
+// -------------------------------------------------------------
+let canalBroadcastConectado = null;
+let statusInscricaoCanal = 'connecting';
+
+export function obterCanalBroadcastCasal() {
+  if (!canalBroadcastConectado) {
+    canalBroadcastConectado = supabase.channel('canal_sintonia_notificacoes', {
+      config: { broadcast: { self: false } },
+    });
+
+    canalBroadcastConectado.subscribe((status) => {
+      statusInscricaoCanal = status;
+      console.log('Realtime canal_sintonia_notificacoes status:', status);
+    });
+  }
+  return canalBroadcastConectado;
+}
+
+// Inicia inscrição do canal imediatamente ao carregar
+obterCanalBroadcastCasal();
+
+export async function enviarBroadcastCasal(payload) {
+  try {
+    const ch = obterCanalBroadcastCasal();
+
+    // Se ainda não estiver conectado, aguarda conexão (máximo 2.5s)
+    if (statusInscricaoCanal !== 'SUBSCRIBED') {
+      await new Promise((resolve) => {
+        const check = setInterval(() => {
+          if (statusInscricaoCanal === 'SUBSCRIBED') {
+            clearInterval(check);
+            resolve(true);
+          }
+        }, 100);
+        setTimeout(() => {
+          clearInterval(check);
+          resolve(false);
+        }, 2500);
+      });
+    }
+
+    const res = await ch.send({
+      type: 'broadcast',
+      event: 'notificacao_casal',
+      payload,
+    });
+    return res;
+  } catch (err) {
+    console.warn('Falha no envio do broadcast:', err);
+  }
+}
+
+// -------------------------------------------------------------
 // ⚙️ CONFIGURAÇÕES DO CASAL & FOTOS DE PERFIL (TRIPLA PERSISTÊNCIA EM NUVEM)
 // -------------------------------------------------------------
 export async function buscarConfiguracoesCasalNuvem() {
@@ -189,16 +243,11 @@ export async function salvarRespostaDiaria(parceiro, { nivel, motivo, musica_url
 
   // Broadcast em tempo real imediato (0ms) para o parceiro
   try {
-    const channel = supabase.channel('canal_sintonia_notificacoes');
-    await channel.send({
-      type: 'broadcast',
-      event: 'notificacao_casal',
-      payload: {
-        remetente: parceiro,
-        titulo: `🌡️ ${parceiro === 'parceiro1' ? '🐰 Jeniffer' : '🦊 Alvaro'} atualizou o humor!`,
-        corpo: `Nível de felicidade: ${nivel}/100. Veja o que fez seu amor se sentir assim 💜`,
-        tag: 'termometro-humor',
-      },
+    await enviarBroadcastCasal({
+      remetente: parceiro,
+      titulo: `🌡️ ${parceiro === 'parceiro1' ? '🐰 Jeniffer' : '🦊 Alvaro'} atualizou o humor!`,
+      corpo: `Nível de felicidade: ${nivel}/100. Veja o que fez seu amor se sentir assim 💜`,
+      tag: 'termometro-humor',
     });
   } catch (bErr) {
     console.warn('Broadcast humor err:', bErr);
@@ -319,16 +368,11 @@ export async function criarPostFeed({ parceiro, autor_nome, texto, foto_url }) {
 
   // Broadcast em tempo real imediato para o parceiro
   try {
-    const channel = supabase.channel('canal_sintonia_notificacoes');
-    await channel.send({
-      type: 'broadcast',
-      event: 'notificacao_casal',
-      payload: {
-        remetente: parceiro,
-        titulo: `📸 ${parceiro === 'parceiro1' ? '🐰' : '🦊'} ${autor_nome || 'Seu amor'} postou no Feed!`,
-        corpo: texto ? `"${texto.slice(0, 70)}..."` : 'Confira a nova foto no Feed do casal! 💜',
-        tag: 'feed-post',
-      },
+    await enviarBroadcastCasal({
+      remetente: parceiro,
+      titulo: `📸 ${parceiro === 'parceiro1' ? '🐰' : '🦊'} ${autor_nome || 'Seu amor'} postou no Feed!`,
+      corpo: texto ? `"${texto.slice(0, 70)}..."` : 'Confira a nova foto no Feed do casal! 💜',
+      tag: 'feed-post',
     });
   } catch (bErr) {
     console.warn('Broadcast feed err:', bErr);
@@ -372,6 +416,18 @@ export async function reagirPostFeed(postId, parceiro, emoji, reacoesAtuais = {}
     await alternarCurtidaPost(postId, parceiro);
   }
 
+  // Notifica o parceiro sobre a reação
+  if (emoji) {
+    try {
+      await enviarBroadcastCasal({
+        remetente: parceiro,
+        titulo: `❤️ ${parceiro === 'parceiro1' ? '🐰 Jeniffer' : '🦊 Alvaro'} reagiu com ${emoji}!`,
+        corpo: 'Seu amor acabou de reagir a uma foto no Feed 💜',
+        tag: 'feed-reacao',
+      });
+    } catch {}
+  }
+
   return objReacoes;
 }
 
@@ -404,6 +460,17 @@ export async function adicionarComentarioPost(postId, { parceiro, autor_nome, te
     .update({ comentarios: novosComentarios })
     .eq('id', postId);
   if (error) throw error;
+
+  // Notifica o parceiro sobre o comentário
+  try {
+    await enviarBroadcastCasal({
+      remetente: parceiro,
+      titulo: `💬 ${parceiro === 'parceiro1' ? '🐰' : '🦊'} ${autor_nome || 'Seu amor'} comentou no Feed!`,
+      corpo: `"${texto.slice(0, 65)}"`,
+      tag: 'feed-comentario',
+    });
+  } catch {}
+
   return novosComentarios;
 }
 
@@ -485,16 +552,11 @@ export async function enviarMensagemConversa(parceiro, texto, emoji, fotoUrl = n
 
   // Broadcast em tempo real imediato para o parceiro
   try {
-    const channel = supabase.channel('canal_sintonia_notificacoes');
-    await channel.send({
-      type: 'broadcast',
-      event: 'notificacao_casal',
-      payload: {
-        remetente: parceiro,
-        titulo: `💬 ${parceiro === 'parceiro1' ? '🐰' : '🦊'} Recado do seu amor!`,
-        corpo: texto && texto !== '📸' ? texto : 'Enviou uma nova foto no chat! 📷',
-        tag: 'chat-message',
-      },
+    await enviarBroadcastCasal({
+      remetente: parceiro,
+      titulo: `💬 ${parceiro === 'parceiro1' ? '🐰' : '🦊'} Recado do seu amor!`,
+      corpo: texto && texto !== '📸' ? texto : 'Enviou uma nova foto no chat! 📷',
+      tag: 'chat-message',
     });
   } catch (bErr) {
     console.warn('Broadcast chat err:', bErr);
@@ -534,6 +596,15 @@ export async function uploadFotoConversa(file) {
 export async function adicionarFilmeSerie(item) {
   const { error } = await supabase.from('filmes_series').insert(item);
   if (error) throw error;
+
+  try {
+    await enviarBroadcastCasal({
+      remetente: item.sugerido_por,
+      titulo: `🍿 ${item.sugerido_por || 'Seu amor'} sugeriu um ${item.tipo === 'serie' ? 'uma série' : 'um filme'}!`,
+      corpo: `"${item.titulo}" para assistirem juntos 🎬`,
+      tag: 'filme-serie',
+    });
+  } catch {}
 }
 
 export async function buscarFilmesSeries() {
@@ -627,16 +698,11 @@ export async function salvarMemoria(memoria) {
 
   // Broadcast em tempo real imediato para o parceiro
   try {
-    const channel = supabase.channel('canal_sintonia_notificacoes');
-    await channel.send({
-      type: 'broadcast',
-      event: 'notificacao_casal',
-      payload: {
-        remetente: memoria.criado_por,
-        titulo: `📖 Nova foto no Álbum Scrapbook!`,
-        corpo: memoria.titulo ? `"${memoria.titulo}" foi colada no álbum com muito carinho 💜` : 'Uma nova foto foi colada no Scrapbook!',
-        tag: 'novo-scrapbook',
-      },
+    await enviarBroadcastCasal({
+      remetente: memoria.criado_por,
+      titulo: `🖼️ ${memoria.criado_por || 'Seu amor'} adicionou uma foto na Galeria!`,
+      corpo: memoria.titulo ? `"${memoria.titulo}" foi adicionada à galeria do casal 💜` : 'Uma nova foto foi guardada na galeria!',
+      tag: 'novo-album',
     });
   } catch (bErr) {
     console.warn('Broadcast memoria err:', bErr);
@@ -702,6 +768,16 @@ export async function criarCartaAbraQuando({ titulo, mensagem, escrita_por, foto
     aberta: false,
   });
   if (error) throw error;
+
+  // Dispara notificação imediata para o parceiro
+  try {
+    await enviarBroadcastCasal({
+      remetente: escrita_por,
+      titulo: `💌 ${escrita_por === 'parceiro1' || escrita_por === 'Jeniffer' ? '🐰 Jeniffer' : '🦊 Alvaro'} te escreveu uma carta secreta!`,
+      corpo: `"${titulo}" — Abra quando quiser! 💜`,
+      tag: 'carta-secreta',
+    });
+  } catch {}
 }
 
 export async function buscarCartas() {
@@ -798,6 +874,17 @@ export async function salvarLocalizacaoRadar(parceiro, { latitude, longitude, pr
   });
 
   if (error) throw error;
+
+  // Notifica o parceiro sobre a atualização de GPS
+  try {
+    await enviarBroadcastCasal({
+      remetente: p,
+      titulo: `📍 ${p === 'parceiro1' ? '🐰 Jeniffer' : '🦊 Alvaro'} atualizou a localização!`,
+      corpo: endereco ? `Está em: ${endereco}` : 'Abra a aba Distância para conferir a quantos km vocês estão! 💜',
+      tag: 'radar-localizacao',
+    });
+  } catch {}
+
   return payload;
 }
 
@@ -901,16 +988,11 @@ export function subscribeToTable(table, onPayload) {
 export async function enviarNotificacaoTeste(quemSouEu, meuNome, meuEmoji, outroNome) {
   // 1. Envia via broadcast em tempo real para disparo imediato (0ms)
   try {
-    const channel = supabase.channel('canal_sintonia_notificacoes');
-    await channel.send({
-      type: 'broadcast',
-      event: 'notificacao_casal',
-      payload: {
-        remetente: quemSouEu,
-        titulo: `🔔 ${meuEmoji} Notificação de Teste de ${meuNome}!`,
-        corpo: `${meuNome} acabou de testar as notificações com você agora mesmo! 💜`,
-        tag: 'teste-casal',
-      },
+    await enviarBroadcastCasal({
+      remetente: quemSouEu,
+      titulo: `🔔 ${meuEmoji} Notificação de Teste de ${meuNome}!`,
+      corpo: `${meuNome} acabou de testar as notificações com você agora mesmo! 💜`,
+      tag: 'teste-casal',
     });
   } catch (err) {
     console.warn('Broadcast teste erro:', err);

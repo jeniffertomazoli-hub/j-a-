@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { supabase } from '../lib/supabase';
+import { supabase, obterCanalBroadcastCasal } from '../lib/supabase';
 import { sendAppNotification } from '../lib/notifications';
 import { useToast } from '../context/ToastContext';
 
@@ -13,17 +13,15 @@ export function useNotificationWatcher(quemSouEu, settings) {
   useEffect(() => {
     if (!quemSouEu) return;
 
-    // 1. Canal Broadcast em tempo real para disparos instantâneos (teste / toques)
-    const broadcastChannel = supabase
-      .channel('canal_sintonia_notificacoes')
-      .on('broadcast', { event: 'notificacao_casal' }, (event) => {
-        const data = event.payload;
-        if (data && data.remetente !== quemSouEu) {
-          sendAppNotification(data.titulo, { body: data.corpo, tag: data.tag || 'notificacao-casal' });
-          toast.love(data.titulo);
-        }
-      })
-      .subscribe();
+    // 1. Canal Broadcast em tempo real compartilhado para notificações instantâneas
+    const broadcastChannel = obterCanalBroadcastCasal();
+    broadcastChannel.on('broadcast', { event: 'notificacao_casal' }, (event) => {
+      const data = event.payload;
+      if (data && data.remetente !== quemSouEu && data.remetente !== meuNome) {
+        sendAppNotification(data.titulo, { body: data.corpo, tag: data.tag || 'notificacao-casal' });
+        toast.love(data.titulo);
+      }
+    });
 
     // 2. Escuta Feed Posts
     const feedChannel = supabase
@@ -192,7 +190,6 @@ export function useNotificationWatcher(quemSouEu, settings) {
       .subscribe();
 
     return () => {
-      supabase.removeChannel(broadcastChannel);
       supabase.removeChannel(feedChannel);
       supabase.removeChannel(cartasChannel);
       supabase.removeChannel(chatChannel);

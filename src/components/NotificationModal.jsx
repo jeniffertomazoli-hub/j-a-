@@ -104,39 +104,54 @@ export default function NotificationModal({
       <div className="space-y-4 py-1 text-ink">
         {/* Card de Status da Permissão */}
         {permission === 'granted' ? (
-          <div className="p-3 bg-green/20 rounded-2xl border-2 border-ink shadow-brutsm flex items-center gap-3">
-            <span className="text-2xl">✅</span>
-            <div className="min-w-0">
-              <p className="text-xs font-black text-ink">
-                Notificações Ativas no seu Aparelho
-              </p>
-              <p className="text-[11px] text-ink/75 font-semibold leading-tight">
-                Você será avisado(a) sempre que {outroNome} fizer algo no app!
-              </p>
+          <div className="p-3 bg-green-50 rounded-2xl border-2 border-ink shadow-brutsm space-y-1.5">
+            <div className="flex items-center gap-2">
+              <span className="text-2xl">✅</span>
+              <div>
+                <p className="text-xs font-black text-ink">
+                  Permissão Concedida no Navegador
+                </p>
+                <p className="text-[11px] text-ink/75 font-semibold leading-tight">
+                  Seu navegador está autorizado a receber avisos de {outroNome}!
+                </p>
+              </div>
+            </div>
+            <div className="bg-white/80 p-2 rounded-xl border border-ink/20 text-[10px] text-ink/80 space-y-1">
+              <p className="font-bold">⚠️ Dica importante para Celulares (Android & iOS):</p>
+              <p>• <strong>Android:</strong> Se o banner não subir, veja em <em>Configurações do Celular ➔ Aplicativos ➔ Chrome/Samsung Internet ➔ Notificações ➔ Permitir</em>.</p>
+              <p>• <strong>iPhone:</strong> O app precisa estar na <em>Tela de Início</em> para receber notificações pelo sistema da Apple.</p>
             </div>
           </div>
         ) : permission === 'denied' ? (
-          <div className="p-3 bg-red-100 rounded-2xl border-2 border-ink shadow-brutsm space-y-1">
+          <div className="p-3 bg-red-50 rounded-2xl border-2 border-ink shadow-brutsm space-y-2">
             <div className="flex items-center gap-2">
               <span className="text-xl">⚠️</span>
-              <p className="text-xs font-black text-ink">Notificações Bloqueadas</p>
+              <p className="text-xs font-black text-ink">Notificações Bloqueadas no Celular</p>
             </div>
-            <p className="text-[11px] text-ink/80 font-medium">
-              O navegador bloqueou as notificações deste site. Para reativar:
+            <p className="text-[11px] text-ink/80 font-medium leading-relaxed">
+              O navegador bloqueou as notificações. Como o navegador não pergunta de novo automaticamente, siga este passo a passo para destravar:
             </p>
-            <p className="text-[10px] font-bold bg-white p-2 rounded-xl border border-ink/30 text-ink/80">
-              🔒 Toque no cadeado ou ícone de configurações ao lado do link do site ➔ Permissões ➔ Ativar Notificações.
-            </p>
+            <div className="bg-white p-2.5 rounded-xl border-2 border-ink/30 text-[10px] font-bold text-ink/90 space-y-1">
+              <p>1. Toque no ícone de cadeado 🔒 ou de configurações na barra de endereço (ao lado do link do site).</p>
+              <p>2. Toque em <strong>Permissões</strong> ou <strong>Configurações do Site</strong>.</p>
+              <p>3. Altere <strong>Notificações</strong> para <strong>Permitir</strong>.</p>
+              <p>4. Recarregue a página!</p>
+            </div>
           </div>
         ) : permission === 'ios-requires-install' ? (
           <div className="p-3 bg-yellow/30 rounded-2xl border-2 border-ink shadow-brutsm space-y-2">
             <div className="flex items-center gap-2">
               <span className="text-xl">🍎</span>
-              <p className="text-xs font-black text-ink">Exigência do iPhone (iOS)</p>
+              <p className="text-xs font-black text-ink">Exigência Obrigatória do iPhone (iOS)</p>
             </div>
             <p className="text-[11px] text-ink/80 font-medium leading-tight">
-              A Apple só autoriza notificações para sites adicionados à Tela de Início.
+              A Apple não autoriza notificações em abas comuns do Safari. É obrigatório instalar como app:
             </p>
+            <div className="bg-white/80 p-2 rounded-xl border border-ink/30 text-[10px] font-bold text-ink/90 space-y-0.5">
+              <p>1. Toque no botão de <strong>Compartilhar</strong> (quadrado com seta ⬆️).</p>
+              <p>2. Escolha <strong>Adicionar à Tela de Início</strong>.</p>
+              <p>3. Abra pelo ícone na tela inicial e autorize as notificações!</p>
+            </div>
             <button
               onClick={() => {
                 onClose();
@@ -145,20 +160,20 @@ export default function NotificationModal({
               className="btn-brut w-full py-2 bg-yellow text-ink text-xs font-black shadow-brut flex items-center justify-center gap-1.5"
             >
               <span>📲</span>
-              <span>Como Adicionar à Tela de Início</span>
+              <span>Ver Passo a Passo com Fotos</span>
             </button>
           </div>
         ) : (
           <div className="p-3 bg-pink/20 rounded-2xl border-2 border-ink shadow-brutsm space-y-2 text-center">
             <p className="text-xs font-black text-ink">
-              Receba avisos quando {outroNome} interagir! 💜
+              Receba avisos quando {outroNome} postar ou registrar algo! 💜
             </p>
             <button
               onClick={handlePedirPermissao}
               className="btn-brut w-full py-2.5 bg-yellow text-ink text-xs font-black shadow-brut flex items-center justify-center gap-2"
             >
               <span>🔔</span>
-              <span>Ativar Notificações Agora</span>
+              <span>Autorizar Notificações Agora</span>
             </button>
           </div>
         )}

@@ -1,5 +1,5 @@
 // Service Worker para o Sintonia PWA e Notificações Push
-const CACHE_NAME = 'sintonia-cache-v3';
+const CACHE_NAME = 'sintonia-cache-v4';
 
 self.addEventListener('install', (event) => {
   self.skipWaiting();

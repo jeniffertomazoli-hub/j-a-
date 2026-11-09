@@ -126,11 +126,18 @@ export async function sendAppNotification(
   { body, icon = '/icon-192.png', badge = '/icon-192.png', tag = 'sintonia-notification' } = {}
 ) {
   if (typeof window === 'undefined') return false;
+
+  // 1. Sempre emite feedback sonoro e vibração tátil no aparelho
+  playChimeSound();
+  if (typeof navigator !== 'undefined' && 'vibrate' in navigator) {
+    try {
+      navigator.vibrate([200, 100, 200]);
+    } catch {}
+  }
+
   if (!isNotificationSupported() || Notification.permission !== 'granted') {
     return false;
   }
-
-  playChimeSound();
 
   const notifOptions = {
     body,
@@ -142,23 +149,35 @@ export async function sendAppNotification(
     renotify: true,
   };
 
-  // 1. Tenta via Service Worker showNotification (Obrigatório no Android Chrome, ideal para PWA)
+  // 2. Nos celulares (Android Chrome, Samsung Internet, iOS PWA), é obrigatório ServiceWorker.showNotification
   if ('serviceWorker' in navigator) {
+    // Tenta registrar/obter o service worker diretamente
     try {
-      const timeoutPromise = new Promise((resolve) => setTimeout(() => resolve(null), 1500));
-      const reg =
-        (await Promise.race([navigator.serviceWorker.ready, timeoutPromise])) ||
-        (await navigator.serviceWorker.getRegistration());
+      let reg = await navigator.serviceWorker.getRegistration();
+      if (!reg) {
+        reg = await navigator.serviceWorker.register('/sw.js');
+      }
 
       if (reg && typeof reg.showNotification === 'function') {
         await reg.showNotification(title, notifOptions);
         return true;
       }
     } catch (swErr) {
-      console.warn('Falha em registration.showNotification:', swErr);
+      console.warn('Tentativa via getRegistration falhou:', swErr);
     }
 
-    // 2. Mensagem direta para o Service Worker ativo (caso ready tenha demorado)
+    // Tenta via navigator.serviceWorker.ready
+    try {
+      const readyReg = await navigator.serviceWorker.ready;
+      if (readyReg && typeof readyReg.showNotification === 'function') {
+        await readyReg.showNotification(title, notifOptions);
+        return true;
+      }
+    } catch (readyErr) {
+      console.warn('Tentativa via serviceWorker.ready falhou:', readyErr);
+    }
+
+    // Tenta via postMessage para o Service Worker
     try {
       if (navigator.serviceWorker.controller) {
         navigator.serviceWorker.controller.postMessage({
@@ -169,22 +188,16 @@ export async function sendAppNotification(
         return true;
       }
     } catch (msgErr) {
-      console.warn('Falha ao enviar mensagem de notificação para SW:', msgErr);
+      console.warn('Tentativa via postMessage falhou:', msgErr);
     }
   }
 
-  // 3. Fallback para Notification API padrão (Desktop / navegadores que suportam construtor)
+  // 3. Fallback para Notification API padrão (Desktop Chrome/Firefox/Safari)
   try {
-    new Notification(title, {
-      body,
-      icon,
-      badge,
-      tag,
-    });
+    new Notification(title, notifOptions);
     return true;
   } catch (err) {
-    // No Android Chrome, 'new Notification()' gera 'TypeError: Illegal constructor'
-    console.warn('Fallback Notification constructor indisponível no aparelho:', err);
+    console.warn('Fallback Notification constructor indisponível:', err);
     return false;
   }
 }
