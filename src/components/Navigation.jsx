@@ -6,7 +6,7 @@ export const TABS = [
   { id: 'feed', label: 'Feed', emoji: '📸' },
   { id: 'cartas', label: 'Cartas', emoji: '💌' },
   { id: 'filmes', label: 'Filmes', emoji: '🎬' },
-  { id: 'memorias', label: 'Memórias', emoji: '✨' },
+  { id: 'memorias', label: 'Scrapbook', emoji: '📖' },
   { id: 'historico', label: 'Painel', emoji: '📊' },
 ];
 

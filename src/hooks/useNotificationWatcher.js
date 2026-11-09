@@ -128,9 +128,9 @@ export function useNotificationWatcher(quemSouEu, settings) {
         (payload) => {
           const mem = payload.new;
           if (mem && mem.titulo !== '__CONFIG_PERFIL__' && mem.criado_por !== meuNome) {
-            const titulo = `🎞️ ${outroEmoji} ${outroNome} adicionou uma nova memória!`;
-            const msg = mem.titulo ? `"${mem.titulo}" foi guardado no álbum de vocês 💜` : 'Uma nova foto foi adicionada ao álbum!';
-            sendAppNotification(titulo, { body: msg, tag: 'nova-memoria' });
+            const titulo = `📖 ${outroEmoji} ${outroNome} colou uma foto no Scrapbook!`;
+            const msg = mem.titulo ? `"${mem.titulo}" foi adicionada ao álbum de vocês 💜` : 'Uma nova foto foi colada no Scrapbook!';
+            sendAppNotification(titulo, { body: msg, tag: 'novo-scrapbook' });
             toast.love(titulo);
           }
         }

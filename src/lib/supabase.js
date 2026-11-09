@@ -624,6 +624,23 @@ export async function buscarRespostasQuiz() {
 export async function salvarMemoria(memoria) {
   const { error } = await supabase.from('memorias').insert(memoria);
   if (error) throw error;
+
+  // Broadcast em tempo real imediato para o parceiro
+  try {
+    const channel = supabase.channel('canal_sintonia_notificacoes');
+    await channel.send({
+      type: 'broadcast',
+      event: 'notificacao_casal',
+      payload: {
+        remetente: memoria.criado_por,
+        titulo: `📖 Nova foto no Álbum Scrapbook!`,
+        corpo: memoria.titulo ? `"${memoria.titulo}" foi colada no álbum com muito carinho 💜` : 'Uma nova foto foi colada no Scrapbook!',
+        tag: 'novo-scrapbook',
+      },
+    });
+  } catch (bErr) {
+    console.warn('Broadcast memoria err:', bErr);
+  }
 }
 
 export async function uploadImagemMemoria(file) {

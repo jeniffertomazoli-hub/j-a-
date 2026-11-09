@@ -66,6 +66,81 @@
   box-shadow: 1.5px 1.5px 0px #14142B;
 }
 
+/* Scrapbook & Polaroid Aesthetics */
+.polaroid-card {
+  background: #ffffff;
+  border: 3px solid #14142B;
+  box-shadow: 4px 5px 0px #14142B;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  position: relative;
+}
+
+.polaroid-card:hover {
+  box-shadow: 6px 8px 0px #14142B;
+  z-index: 15;
+}
+
+.washi-tape-strip {
+  position: absolute;
+  top: -11px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 90px;
+  height: 22px;
+  opacity: 0.92;
+  box-shadow: 0 1px 3px rgba(20, 20, 43, 0.2);
+  clip-path: polygon(4% 0%, 96% 0%, 100% 50%, 96% 100%, 4% 100%, 0% 50%);
+  z-index: 10;
+  pointer-events: none;
+}
+
+.washi-tape-corner-left {
+  position: absolute;
+  top: -8px;
+  left: -10px;
+  width: 50px;
+  height: 18px;
+  transform: rotate(-35deg);
+  opacity: 0.92;
+  box-shadow: 0 1px 3px rgba(20, 20, 43, 0.2);
+  clip-path: polygon(5% 0%, 95% 0%, 100% 50%, 95% 100%, 5% 100%, 0% 50%);
+  z-index: 10;
+  pointer-events: none;
+}
+
+.washi-tape-corner-right {
+  position: absolute;
+  top: -8px;
+  right: -10px;
+  width: 50px;
+  height: 18px;
+  transform: rotate(35deg);
+  opacity: 0.92;
+  box-shadow: 0 1px 3px rgba(20, 20, 43, 0.2);
+  clip-path: polygon(5% 0%, 95% 0%, 100% 50%, 95% 100%, 5% 100%, 0% 50%);
+  z-index: 10;
+  pointer-events: none;
+}
+
+.sticker-stamp {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  filter: drop-shadow(2px 2px 0px rgba(20, 20, 43, 0.35));
+  transition: transform 0.15s ease;
+  user-select: none;
+}
+
+.sticker-stamp:hover {
+  transform: scale(1.15) rotate(5deg);
+}
+
+.scrapbook-grid-bg {
+  background-color: #faf7f0;
+  background-image: radial-gradient(#14142B 0.75px, transparent 0.75px);
+  background-size: 16px 16px;
+}
+
 /* Custom Neo-brutalist Slider */
 input[type=range] {
   -webkit-appearance: none;
