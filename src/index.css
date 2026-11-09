@@ -5,7 +5,13 @@
 @layer base {
   html, body, #root {
     min-height: 100%;
-    height: 100%;
+    width: 100%;
+    max-width: 100vw;
+    overflow-x: hidden;
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
+    margin: 0;
+    padding: 0;
   }
 
   body {
@@ -14,6 +20,9 @@
     background-color: #2F3FE0;
     -webkit-tap-highlight-color: transparent;
     padding-bottom: env(safe-area-inset-bottom);
+    overflow-x: hidden;
+    position: relative;
+    max-width: 100vw;
   }
 
   h1, h2, h3, h4, .font-display {
@@ -28,6 +37,8 @@
   border-radius: 1.25rem;
   box-shadow: 4px 4px 0px #14142B;
   transition: transform 0.15s ease, box-shadow 0.15s ease;
+  max-width: 100%;
+  box-sizing: border-box;
 }
 
 .btn-brut {
@@ -40,6 +51,7 @@
   box-shadow: 3px 3px 0px #14142B;
   transition: transform 0.1s ease, box-shadow 0.1s ease, background-color 0.15s ease;
   user-select: none;
+  touch-action: manipulation;
 }
 
 .btn-brut:hover:not(:disabled) {
@@ -59,34 +71,47 @@
   border: 2px solid #14142B;
   border-radius: 9999px;
   font-weight: 800;
-  font-size: 10px;
+  font-size: 11px;
   text-transform: uppercase;
   letter-spacing: 0.04em;
   padding: 4px 10px;
   box-shadow: 1.5px 1.5px 0px #14142B;
+  white-space: nowrap;
+}
+
+/* Mobile Input Scaling Fix: Prevents mobile browsers from zooming in on input focus */
+@media (max-width: 640px) {
+  input:not([type=range]):not([type=checkbox]):not([type=radio]),
+  textarea,
+  select {
+    font-size: 16px !important;
+  }
 }
 
 /* Scrapbook & Polaroid Aesthetics */
 .polaroid-card {
   background: #ffffff;
   border: 3px solid #14142B;
-  box-shadow: 4px 5px 0px #14142B;
+  box-shadow: 3px 4px 0px #14142B;
   transition: transform 0.2s ease, box-shadow 0.2s ease;
   position: relative;
+  max-width: 100%;
+  box-sizing: border-box;
 }
 
 .polaroid-card:hover {
-  box-shadow: 6px 8px 0px #14142B;
+  box-shadow: 5px 6px 0px #14142B;
   z-index: 15;
 }
 
 .washi-tape-strip {
   position: absolute;
-  top: -11px;
+  top: -10px;
   left: 50%;
   transform: translateX(-50%);
-  width: 90px;
-  height: 22px;
+  width: 80px;
+  max-width: 80%;
+  height: 20px;
   opacity: 0.92;
   box-shadow: 0 1px 3px rgba(20, 20, 43, 0.2);
   clip-path: polygon(4% 0%, 96% 0%, 100% 50%, 96% 100%, 4% 100%, 0% 50%);
@@ -96,11 +121,11 @@
 
 .washi-tape-corner-left {
   position: absolute;
-  top: -8px;
-  left: -10px;
-  width: 50px;
-  height: 18px;
-  transform: rotate(-35deg);
+  top: -6px;
+  left: -4px;
+  width: 42px;
+  height: 16px;
+  transform: rotate(-30deg);
   opacity: 0.92;
   box-shadow: 0 1px 3px rgba(20, 20, 43, 0.2);
   clip-path: polygon(5% 0%, 95% 0%, 100% 50%, 95% 100%, 5% 100%, 0% 50%);
@@ -110,11 +135,11 @@
 
 .washi-tape-corner-right {
   position: absolute;
-  top: -8px;
-  right: -10px;
-  width: 50px;
-  height: 18px;
-  transform: rotate(35deg);
+  top: -6px;
+  right: -4px;
+  width: 42px;
+  height: 16px;
+  transform: rotate(30deg);
   opacity: 0.92;
   box-shadow: 0 1px 3px rgba(20, 20, 43, 0.2);
   clip-path: polygon(5% 0%, 95% 0%, 100% 50%, 95% 100%, 5% 100%, 0% 50%);

@@ -91,9 +91,9 @@ export function AppContent() {
   const meuFoto = quemSouEu === 'parceiro1' ? settings.foto1 : settings.foto2;
 
   return (
-    <div className="min-h-screen bg-royal text-ink flex flex-col">
+    <div className="min-h-screen bg-royal text-ink flex flex-col w-full max-w-full overflow-x-hidden">
       <header
-        className="sticky top-0 z-30 bg-royal border-b-3 border-ink"
+        className="sticky top-0 z-30 bg-royal border-b-3 border-ink w-full max-w-full"
         style={{ paddingTop: 'env(safe-area-inset-top)' }}
       >
         <Header
@@ -107,7 +107,7 @@ export function AppContent() {
         <Navigation tabAtiva={tabAtiva} onMudarTab={setTabAtiva} />
       </header>
 
-      <main className="flex-1">
+      <main className="flex-1 w-full max-w-full overflow-x-hidden">
         {tabAtiva === 'termometro' && (
           <TermometroTab
             quemSouEu={quemSouEu}

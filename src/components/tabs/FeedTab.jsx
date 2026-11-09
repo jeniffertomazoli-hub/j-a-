@@ -242,7 +242,7 @@ export default function FeedTab({ quemSouEu, settings }) {
   }
 
   return (
-    <div className="px-3 sm:px-6 pt-4 max-w-md mx-auto pb-16 animate-fadeIn">
+    <div className="px-3 sm:px-6 pt-4 max-w-md mx-auto pb-16 animate-fadeIn w-full overflow-hidden">
       {/* Header Badge */}
       <div className="flex items-center justify-between mb-2">
         <p className="badge-brut bg-pink text-ink text-[10px]">
@@ -412,11 +412,11 @@ export default function FeedTab({ quemSouEu, settings }) {
                         <span className="text-xs font-black text-ink truncate">
                           {autorNome}
                         </span>
-                        <span className={`badge-brut ${corBadge} text-[8px] py-0 px-1.5`}>
+                        <span className={`badge-brut ${corBadge} text-[10px] py-0.5 px-2`}>
                           {ehAutorP1 ? 'Jeniffer' : 'Alvaro'}
                         </span>
                         {reacoes.parceiro1 && reacoes.parceiro2 && (
-                          <span className="badge-brut bg-purple text-ink text-[8px] py-0 px-1.5">
+                          <span className="badge-brut bg-purple text-ink text-[10px] py-0.5 px-2">
                             💜 Sintonia!
                           </span>
                         )}

@@ -87,7 +87,7 @@ function calcularTempoPassado(dataStr) {
 }
 
 function getScrapbookRotation(index, id) {
-  const angles = [-2.2, 1.8, -1.4, 2.2, -1.8, 1.4, -2.5, 2.0];
+  const angles = [-1.0, 0.8, -0.6, 1.0, -0.8, 0.6, -1.0, 0.8];
   let sum = 0;
   if (id) {
     for (let i = 0; i < id.length; i++) sum += id.charCodeAt(i);
@@ -254,7 +254,7 @@ export default function MemoriasTab({ quemSouEu, settings }) {
   }
 
   return (
-    <div className="px-3.5 sm:px-6 pt-4 max-w-md mx-auto pb-16 animate-fadeIn">
+    <div className="px-3 sm:px-6 pt-4 max-w-md mx-auto pb-16 animate-fadeIn w-full overflow-hidden">
       {/* Top Header Badge */}
       <div className="flex items-center justify-between mb-2">
         <p className="badge-brut bg-pink text-ink text-[10px]">

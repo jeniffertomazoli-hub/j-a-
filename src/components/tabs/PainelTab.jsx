@@ -141,7 +141,7 @@ export default function PainelTab({ quemSouEu, settings }) {
   }
 
   return (
-    <div className="px-3.5 sm:px-6 pt-4 max-w-2xl mx-auto pb-14 animate-fadeIn">
+    <div className="px-3 sm:px-6 pt-4 max-w-2xl mx-auto pb-14 animate-fadeIn w-full overflow-hidden">
       {/* Header Badge */}
       <div className="flex items-center justify-between mb-2">
         <p className="badge-brut bg-cyan text-ink text-[10px]">

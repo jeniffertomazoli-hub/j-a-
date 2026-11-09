@@ -102,7 +102,7 @@ export default function FilmesTab({ quemSouEu, settings }) {
   const pendentesParaSortear = lista.filter((item) => !item.assistido);
 
   return (
-    <div className="px-4 sm:px-6 pt-5 max-w-md mx-auto pb-12 animate-fadeIn">
+    <div className="px-3 sm:px-6 pt-5 max-w-md mx-auto pb-12 animate-fadeIn w-full overflow-hidden">
       <div className="flex items-center justify-between mb-2">
         <p className="badge-brut bg-yellow text-ink">Sessão Pipoca 🍿</p>
         <button

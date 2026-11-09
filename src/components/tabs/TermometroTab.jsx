@@ -247,7 +247,7 @@ export default function TermometroTab({ quemSouEu, settings, onIrParaFeed, onIrP
   const sintoniaAtual = p1 && p2 ? calcularCompatibilidade(p1.respostas.nivel, p2.respostas.nivel) : null;
 
   return (
-    <div className="px-3.5 sm:px-6 pt-4 max-w-md mx-auto pb-14 animate-fadeIn">
+    <div className="px-3 sm:px-6 pt-4 max-w-md mx-auto pb-14 animate-fadeIn w-full overflow-hidden">
       {/* Header Badge */}
       <div className="flex items-center justify-between mb-2">
         <p className="badge-brut bg-yellow text-ink text-[10px]">

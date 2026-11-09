@@ -202,7 +202,7 @@ export default function CartasTab({ quemSouEu, settings }) {
   const cartasAbertas = cartas.filter((c) => c.aberta);
 
   return (
-    <div className="px-3 sm:px-6 pt-4 max-w-md mx-auto pb-14 animate-fadeIn">
+    <div className="px-3 sm:px-6 pt-4 max-w-md mx-auto pb-14 animate-fadeIn w-full overflow-hidden">
       {/* Header */}
       <div className="flex items-center justify-between mb-2">
         <p className="badge-brut bg-pink text-ink text-[10px]">

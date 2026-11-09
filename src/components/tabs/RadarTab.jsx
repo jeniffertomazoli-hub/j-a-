@@ -166,7 +166,7 @@ export default function RadarTab({ quemSouEu, settings }) {
   const outraLoc = ehP1 ? locP2 : locP1;
 
   return (
-    <div className="px-3.5 sm:px-6 pt-4 max-w-md mx-auto pb-16 animate-fadeIn">
+    <div className="px-3 sm:px-6 pt-4 max-w-md mx-auto pb-16 animate-fadeIn w-full overflow-hidden">
       {/* Header Badge */}
       <div className="flex items-center justify-between mb-2">
         <p className="badge-brut bg-yellow text-ink text-[10px]">

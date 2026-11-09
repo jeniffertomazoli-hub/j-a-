@@ -77,22 +77,22 @@ export default function Header({
 
   return (
     <>
-      <div className="max-w-3xl mx-auto px-3 sm:px-5 pt-2.5 pb-2 flex items-center justify-between gap-2">
+      <div className="max-w-3xl mx-auto px-2.5 sm:px-5 pt-2 sm:pt-2.5 pb-2 flex items-center justify-between gap-1.5 sm:gap-2 w-full">
         {/* Brand & Days Counter */}
-        <div className="flex items-center gap-2 min-w-0">
-          <div className="w-8 h-8 rounded-full bg-yellow border-3 border-ink flex items-center justify-center font-display font-extrabold text-ink shrink-0 text-sm shadow-brutsm">
+        <div className="flex items-center gap-1.5 sm:gap-2 min-w-0">
+          <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-yellow border-2 sm:border-3 border-ink flex items-center justify-center font-display font-extrabold text-ink shrink-0 text-xs sm:text-sm shadow-brutsm">
             S
           </div>
           <div className="min-w-0">
-            <span className="font-display font-extrabold text-white text-sm sm:text-base truncate block leading-tight">
+            <span className="font-display font-extrabold text-white text-xs sm:text-base truncate block leading-tight">
               Sintonia
             </span>
             {timeTogether ? (
-              <span className="text-[10px] font-bold text-yellow/90 block truncate leading-none mt-0.5">
+              <span className="text-[9px] sm:text-[10px] font-bold text-yellow/90 block truncate leading-none mt-0.5">
                 💜 {timeTogether.totalDays} dias juntos
               </span>
             ) : (
-              <span className="text-[10px] font-bold text-white/70 block truncate leading-none mt-0.5">
+              <span className="text-[9px] sm:text-[10px] font-bold text-white/70 block truncate leading-none mt-0.5">
                 {settings?.apelido1 || 'Jeniffer'} & {settings?.apelido2 || 'Alvaro'}
               </span>
             )}
@@ -100,11 +100,11 @@ export default function Header({
         </div>
 
         {/* Action Controls */}
-        <div className="flex items-center gap-1.5 shrink-0">
+        <div className="flex items-center gap-1 sm:gap-1.5 shrink-0">
           {/* Botão Instalar App (PWA) */}
           <button
             onClick={() => setIsInstallOpen(true)}
-            className="w-8 h-8 rounded-full border-3 border-ink bg-white text-ink flex items-center justify-center text-xs shadow-brutsm hover:bg-yellow transition active:scale-95"
+            className="w-7 h-7 sm:w-8 sm:h-8 rounded-full border-2 sm:border-3 border-ink bg-white text-ink flex items-center justify-center text-xs shadow-brutsm hover:bg-yellow transition active:scale-95"
             title="Instalar App no Celular 📲"
             aria-label="Instalar App"
           >
@@ -114,7 +114,7 @@ export default function Header({
           {/* Botão Notificações */}
           <button
             onClick={() => setIsNotifModalOpen(true)}
-            className={`w-8 h-8 rounded-full border-3 border-ink flex items-center justify-center text-xs sm:text-sm shadow-brutsm transition active:scale-95 ${
+            className={`w-7 h-7 sm:w-8 sm:h-8 rounded-full border-2 sm:border-3 border-ink flex items-center justify-center text-xs sm:text-sm shadow-brutsm transition active:scale-95 ${
               notifPermission === 'granted'
                 ? 'bg-yellow text-ink'
                 : 'bg-white/80 text-ink/70 hover:bg-yellow'
@@ -136,7 +136,7 @@ export default function Header({
           {/* Configurações */}
           <button
             onClick={onOpenSettings}
-            className="w-8 h-8 rounded-full border-3 border-ink bg-white text-ink flex items-center justify-center text-xs sm:text-sm shadow-brutsm hover:bg-yellow transition active:scale-95"
+            className="w-7 h-7 sm:w-8 sm:h-8 rounded-full border-2 sm:border-3 border-ink bg-white text-ink flex items-center justify-center text-xs sm:text-sm shadow-brutsm hover:bg-yellow transition active:scale-95"
             title="Configurações do Casal"
             aria-label="Configurações"
           >
@@ -146,13 +146,18 @@ export default function Header({
           {/* Trocar Perfil */}
           <button
             onClick={onTrocarPerfil}
-            className="flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-extrabold border-3 border-ink bg-white text-ink whitespace-nowrap shadow-brutsm hover:bg-yellow transition active:scale-95"
+            className="flex items-center gap-1 px-1.5 sm:px-2.5 py-0.5 sm:py-1 rounded-full text-[9px] sm:text-[10px] font-extrabold border-2 sm:border-3 border-ink bg-white text-ink whitespace-nowrap shadow-brutsm hover:bg-yellow transition active:scale-95"
+            title="Trocar Perfil"
           >
             Trocar
           </button>
 
           {/* Avatar com Foto Real ou Emoji */}
-          <div className="flex items-center gap-1 pl-0.5">
+          <div
+            onClick={onTrocarPerfil}
+            className="flex items-center gap-1 pl-0.5 cursor-pointer active:scale-95 transition"
+            title={`Conectado como ${nomeEu} (toque para alternar)`}
+          >
             <span className="text-xs font-bold text-white hidden sm:inline whitespace-nowrap">
               Olá, {nomeEu}!
             </span>
